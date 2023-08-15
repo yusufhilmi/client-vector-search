@@ -1,9 +1,11 @@
 {
   "name": "client-vector-search",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "A client side vector search library",
-  "main": "index.ts",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
   "scripts": {
+    "build": "tsc",
     "start": "tsc --watch",
     "test": "jest"
   },
@@ -15,7 +17,7 @@
     "vector",
     "search",
     "embeddings",
-    "language",
+    "nlp",
     "models"
   ],
   "author": "yusufhilmi",
