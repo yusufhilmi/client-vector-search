@@ -1,0 +1,36 @@
+{
+  "name": "client-vector-search",
+  "version": "0.0.1",
+  "description": "A client side vector search library",
+  "main": "index.ts",
+  "scripts": {
+    "start": "tsc --watch",
+    "test": "jest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yusufhilmi/client-vector-search.git"
+  },
+  "keywords": [
+    "vector",
+    "search",
+    "embeddings",
+    "language",
+    "models"
+  ],
+  "author": "yusufhilmi",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/yusufhilmi/client-vector-search/issues"
+  },
+  "homepage": "https://github.com/yusufhilmi/client-vector-search#readme",
+  "dependencies": {
+    "@xenova/transformers": "^2.5.2"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.3",
+    "jest": "^29.6.2",
+    "ts-jest": "^29.1.1",
+    "typescript": "^5.1.6"
+  }
+}
