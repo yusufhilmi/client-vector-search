@@ -18,8 +18,13 @@ We'll initially keep things super simple and sub 100ms
 ### TODOs
 - [x] embed with gte-small model
 - [x] cosine similarity
-- [ ] create an index and implement search
-  - [ ] k-d-tree
+- [x] create an index and implement search
+  - [x] brute force
+  - sub 10ms for to search 1k vectors
+  - sub 15ms for to create an index with 1k vectors
+  - creating 1k embeddings takes too much time and space tho!
+- [ ] caching embeddings
+- [ ] saving the index to IndexedDB or localStorage
 - [ ] list out the models we recommend
   - [ ] check their dimensions
 - [ ] test the performance of embedding times, indexing and search
@@ -29,7 +34,8 @@ We'll initially keep things super simple and sub 100ms
 - [ ] simple tests
   - [ ] mock the @xenova/transformers for jest, it's not happy with it
 - [ ] automatically switch to a local vs API endpoint to get embeddings!
-
+- [ ] better index creation, search with k-d-tree, ball-tree etc. (wip)
+  - not a priority for now, 1k index takes sub 15ms to create, main problem is to get embeddings faster!
 
 ## Installation
 
