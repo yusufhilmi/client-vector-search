@@ -46,39 +46,34 @@ npm install client-vector-search
 
 ## Usage
 
-
 ```ts
-import { cosineSimilarity, getEmbedding } from "client-vector-search"
+import { getEmbedding, cosineSimilarity, EmbeddingIndex } from 'client-vector-search';
 
-// super simple test for similarity, works with any 2 vectors
-const similarity = cosineSimilarity([1, 2, 3], [9091, 3213212, 2]);
-console.log(similarity);
+// Generate embeddings for string
+const embedding = await getEmbedding("Apple"); // Returns embedding as number[]
 
+// Calculate cosine similarity
+const similarity = cosineSimilarity(embedding1, embedding2, 6); // vecA, vecB: number[], precision: number (optional)
 
-const main = async () => {
-  // Different subjects with gte-small should give ~0.748259 for similarity score
-  const test1 = [
-    "The sun rises in the east and sets in the west, creating a beautiful view.",
-    "A cat is a small, furry mammal often kept as a pet.",
-  ];
+// Initial objects for the index
+// Objects with 'embedding' property of type number[]
+const initialObjects = [
+{ id: 1, name: "Apple", embedding: await getEmbedding("Apple") },
+{ id: 2, name: "Banana", embedding: await getEmbedding("Banana") },
+{ id: 3, name: "Cheddar", embedding: await getEmbedding("Cheddar")},
+{ id: 4, name: "Space", embedding: await getEmbedding("Space")},
+{ id: 5, name: "database", embedding: await getEmbedding("database")},
+];
+const index = new EmbeddingIndex(initialObjects); // Creates an index
 
-// old school one by one embeds
-  const embedding = await getEmbedding(test1[0]);
-  const embedding1 = await getEmbedding(test1[1]);
+// Add an object to the index
+const objectToAdd = { id: 6, name: 'Cat', embedding: await getEmbedding('Cat') };
+index.add(objectToAdd); // Adds object with 'embedding' property
 
-  const similarity1 = cosineSimilarity(embedding, embedding1);
+// Search the index
+const queryEmbedding = await getEmbedding('Fruit'); // Query embedding
+const results = index.search(queryEmbedding, { topK: 5 }); // Returns top similar objects
 
-
-  // batch embedding
-  const embeddings = await Promise.all(
-    test1.map(async (t) => await getEmbedding(t))
-  );
-
-  // console.log(embeddings);
-  const similarity2 = cosineSimilarity(embeddings[0], embeddings[1]);
-  console.log(similarity2);
-};
-
-main();
-
+// Print the entire index
+index.printIndex(); // Prints the content of the index
 ```

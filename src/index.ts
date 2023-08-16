@@ -5,7 +5,7 @@
 
 export const getEmbedding = async (
   text: string,
-  options = { pooling: "mean", normalize: true },
+  options = { pooling: "mean", normalize: false },
   model = "Xenova/gte-small"
 ): Promise<number[]> => {
   const transformersModule = await import("@xenova/transformers");
@@ -70,3 +70,50 @@ export const createIndex = () => {
     },
   };
 };
+
+export class EmbeddingIndex {
+  private objects: { [key: string]: any }[];
+
+  constructor(initialObjects?: { [key: string]: any }[]) {
+    this.objects = [];
+
+    if (initialObjects) {
+      initialObjects.forEach((obj) => this.validateAndAdd(obj));
+    }
+  }
+
+  private validateAndAdd(obj: { [key: string]: any }) {
+    if (!Array.isArray(obj.embedding) || obj.embedding.some(isNaN)) {
+      throw new Error(
+        "Object must have an embedding property of type number[]"
+      );
+    }
+    this.objects.push(obj);
+  }
+
+  add(obj: { [key: string]: any }) {
+    this.validateAndAdd(obj);
+  }
+
+  search(queryEmbedding: number[], options: { topK?: number } = { topK: 3 }) {
+    const topK = options.topK || 3;
+
+    // Compute similarities
+    const similarities = this.objects.map((obj) => ({
+      similarity: cosineSimilarity(queryEmbedding, obj.embedding),
+      object: obj,
+    }));
+
+    // Sort by similarity and return topK results
+    return similarities
+      .sort((a, b) => b.similarity - a.similarity)
+      .slice(0, topK);
+  }
+
+  printIndex() {
+    console.log("Index Content:");
+    this.objects.forEach((obj, idx) => {
+      console.log(`Item ${idx + 1}:`, obj);
+    });
+  }
+}
