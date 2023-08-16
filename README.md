@@ -22,6 +22,7 @@ We'll initially keep things super simple and sub 100ms
   - [x] brute force
   - sub 10ms for to search 1k vectors
   - sub 15ms for to create an index with 1k vectors
+  - takes around 20s to generate 100 embeddings with Xenova/gte-small
   - creating 1k embeddings takes too much time and space tho!
 - [ ] caching embeddings
 - [ ] saving the index to IndexedDB or localStorage
