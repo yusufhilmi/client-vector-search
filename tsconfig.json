@@ -1,17 +1,26 @@
 {
   "compilerOptions": {
-    "incremental": true,            /* Enable incremental compilation */
-    "target": "es6",                /* Specify ECMAScript target version: */
-    "module": "commonjs",           /* 'none', 'commonjs', 'amd', 'system', etc */
-    "declaration": true,            /* Concatenate & emit output to single file.*/
-    "outDir": "lib",        /* Redirect output to the directory. */
-    "strict": true,
-    "esModuleInterop": true,        /* Enables intero between CommonJS and ES */
-    "skipLibCheck": true,           /* Skip type checking of declaration files. */
-    "forceConsistentCasingInFileNames": true /* Disallow inconsistently */
-  },
-  "include": [
-    "src"
-  ],
-  "exclude": ["node_modules", "**/__tests__/*"]
+		"target": "ESNext",
+		"lib": ["ESNext"],
+		"module": "esnext",
+		"rootDir": "./src",
+		"moduleResolution": "node",
+		"baseUrl": "./",
+		"resolveJsonModule": true,
+		"allowJs": true,
+		"declaration": true,
+		"declarationMap": true,
+		"sourceMap": true,
+		"outDir": "./dist",
+		"noUnusedParameters": true,
+		"noUnusedLocals": true,
+    // "target": "es2016", /* Set the JavaScript language version for emitted JavaScript and include compatible library declarations. */
+    // "module": "commonjs", /* Specify what module code is generated. */
+    "esModuleInterop": true, /* Emit additional JavaScript to ease support for importing CommonJS modules. This enables 'allowSyntheticDefaultImports' for type compatibility. */
+    "forceConsistentCasingInFileNames": true, /* Ensure that casing is correct in imports. */
+    "strict": true, /* Enable all strict type-checking options. */
+    "skipLibCheck": true, /* Skip type checking all .d.ts files. */
+    "noUncheckedIndexedAccess": true,
+    "noEmit": true
+  }
 }
