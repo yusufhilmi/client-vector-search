@@ -6,7 +6,7 @@
 export const getEmbedding = async (
   text: string,
   options = { pooling: "mean", normalize: true },
-  model = "Supabase/gte-small"
+  model = "Xenova/gte-small"
 ): Promise<number[]> => {
   const transformersModule = await import("@xenova/transformers");
   const { pipeline } = transformersModule;
@@ -42,4 +42,31 @@ export const cosineSimilarity = (
   return parseFloat(
     (dotProduct / (magnitudeA * magnitudeB)).toFixed(precision)
   );
+};
+
+export const createIndex = () => {
+  const objects: { [key: string]: any }[] = [];
+
+  return {
+    add: (obj: { [key: string]: any }) => {
+      if (!Array.isArray(obj.embedding) || obj.embedding.some(isNaN)) {
+        throw new Error(
+          "Object must have an embedding property of type number[]"
+        );
+      }
+      objects.push(obj);
+    },
+    search: (queryEmbedding: number[], options: { topK?: number } = {}) => {
+      // Compute similarities
+      const similarities = objects.map((obj) => ({
+        similarity: cosineSimilarity(queryEmbedding, obj.embedding),
+        object: obj,
+      }));
+
+      // Sort by similarity and return topK results
+      return similarities
+        .sort((a, b) => b.similarity - a.similarity)
+        .slice(0, options.topK);
+    },
+  };
 };
