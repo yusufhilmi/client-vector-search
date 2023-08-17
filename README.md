@@ -1,6 +1,10 @@
 # client-vector-search
 
-A client side vector search library that can embed, search, and cache. Works with TS and both on the client and server side.
+A client side vector search library that can embed, search, and cache. Works on the browser and server side.
+
+It outperforms OpenAI's text-embedding-ada-002 and is way faster than Pinecone and other VectorDBs
+
+I'm the founder of [searchbase.app](https://searchbase.app) and we needed this for our product and customers. We'll be using this library in production. You can be sure it'll be maintained and improved.
 
 - Embed documents using transformers by default: gte-small (~30mb).
 - Calculate cosine similarity between embeddings.
