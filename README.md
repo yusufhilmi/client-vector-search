@@ -28,6 +28,15 @@ We'll initially keep things super simple and sub 100ms
   - sub 15ms for to create an index with 1k vectors
   - takes around 20s to generate 100 embeddings with Xenova/gte-small
   - creating 1k embeddings takes too much time and space tho!
+- [ ] proper crud!
+  - [x] add
+  - [x] update
+  - [x] remove
+  - [x] get
+  - [ ] batch add
+  - [ ] batch update
+  - [ ] batch remove
+  - [ ] batch get
 - [ ] caching embeddings
 - [ ] saving the index to IndexedDB or localStorage
 - [ ] list out the models we recommend
@@ -51,33 +60,51 @@ npm install client-vector-search
 ## Usage
 
 ```ts
-import { getEmbedding, cosineSimilarity, EmbeddingIndex } from 'client-vector-search';
+  import { getEmbedding, cosineSimilarity, EmbeddingIndex } from 'client-vector-search';
 
-// Generate embeddings for string
-const embedding = await getEmbedding("Apple"); // Returns embedding as number[]
+  // Step 1: Generate embeddings for string
+  // Be careful: getEmbedding is an async function, so you need to use 'await' or '.then()' to get the result
+  const embedding = await getEmbedding("Apple"); // Returns embedding as number[]
 
-// Calculate cosine similarity
-const similarity = cosineSimilarity(embedding1, embedding2, 6); // vecA, vecB: number[], precision: number (optional)
+  // Step 2: Calculate cosine similarity between two embeddings
+  // Be careful: Both embeddings should be of the same length
+  const similarity = cosineSimilarity(embedding1, embedding2, 6); // vecA, vecB: number[], precision: number (optional)
 
-// Initial objects for the index
-// Objects with 'embedding' property of type number[]
-const initialObjects = [
-{ id: 1, name: "Apple", embedding: await getEmbedding("Apple") },
-{ id: 2, name: "Banana", embedding: await getEmbedding("Banana") },
-{ id: 3, name: "Cheddar", embedding: await getEmbedding("Cheddar")},
-{ id: 4, name: "Space", embedding: await getEmbedding("Space")},
-{ id: 5, name: "database", embedding: await getEmbedding("database")},
-];
-const index = new EmbeddingIndex(initialObjects); // Creates an index
+  // Step 3: Create an index with initial objects
+  // Be careful: Each object should have an 'embedding' property of type number[]
+  const initialObjects = [
+  { id: 1, name: "Apple", embedding: await getEmbedding("Apple") },
+  { id: 2, name: "Banana", embedding: await getEmbedding("Banana") },
+  { id: 3, name: "Cheddar", embedding: await getEmbedding("Cheddar")},
+  { id: 4, name: "Space", embedding: await getEmbedding("Space")},
+  { id: 5, name: "database", embedding: await getEmbedding("database")},
+  ];
+  const index = new EmbeddingIndex(initialObjects); // Creates an index
 
-// Add an object to the index
-const objectToAdd = { id: 6, name: 'Cat', embedding: await getEmbedding('Cat') };
-index.add(objectToAdd); // Adds object with 'embedding' property
+  // Step 4: Add an object to the index
+  // Be careful: The object should have an 'embedding' property of type number[]
+  const objectToAdd = { id: 6, name: 'Cat', embedding: await getEmbedding('Cat') };
+  index.add(objectToAdd); // Adds object with 'embedding' property
 
-// Search the index
-const queryEmbedding = await getEmbedding('Fruit'); // Query embedding
-const results = index.search(queryEmbedding, { topK: 5 }); // Returns top similar objects
+  // Step 5: Update an existing vector in the index
+  // Be careful: The filter should match an existing object in the index
+  const vectorToUpdate = { id: 6, name: 'Dog', embedding: await getEmbedding('Dog') };
+  index.update({ id: 6 }, vectorToUpdate); // Updates the vector of the object that matches the filter
 
-// Print the entire index
-index.printIndex(); // Prints the content of the index
+  // Step 6: Remove a vector from the index
+  // Be careful: The filter should match an existing object in the index
+  index.remove({ id: 6 }); // Removes the object that matches the filter from the index
+
+  // Step 7: Retrieve a vector from the index
+  // Be careful: The filter should match an existing object in the index
+  const vector = index.get({ id: 1 }); // Retrieves the object that matches the filter from the index
+
+  // Step 8: Search the index with a query embedding
+  // Be careful: The query should be an embedding of type number[]
+  const queryEmbedding = await getEmbedding('Fruit'); // Query embedding
+  const results = index.search(queryEmbedding, { topK: 5 }); // Returns top similar objects
+
+  // Step 9: Print the entire index
+  // Be careful: This will print all objects in the index, which might be a large output for large indexes
+  index.printIndex(); // Prints the content of the index
 ```
