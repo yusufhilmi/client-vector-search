@@ -1,6 +1,6 @@
 {
   "name": "client-vector-search",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "description": "A client side vector search library",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
