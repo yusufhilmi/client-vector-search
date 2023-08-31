@@ -5,6 +5,7 @@
 
 export const getEmbedding = async (
   text: string,
+  precision: number = 7,
   options = { pooling: "mean", normalize: false },
   model = "Xenova/gte-small"
 ): Promise<number[]> => {
@@ -12,7 +13,10 @@ export const getEmbedding = async (
   const { pipeline } = transformersModule;
   const pipe = await pipeline("feature-extraction", model);
   const output = await pipe(text, options);
-  return Array.from(output.data);
+  const roundedOutput = Array.from(output.data as number[]).map(
+    (value: number) => parseFloat(value.toFixed(precision))
+  );
+  return Array.from(roundedOutput);
 };
 
 export const cosineSimilarity = (
