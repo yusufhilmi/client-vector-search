@@ -28,15 +28,12 @@ We'll initially keep things super simple and sub 100ms
   - sub 15ms for to create an index with 1k vectors
   - takes around 20s to generate 100 embeddings with Xenova/gte-small
   - creating 1k embeddings takes too much time and space tho!
-- [ ] proper crud!
+- [x] proper crud!
   - [x] add
   - [x] update
   - [x] remove
   - [x] get
-  - [ ] batch add
-  - [ ] batch update
-  - [ ] batch remove
-  - [ ] batch get
+  - [x] batch remove
 - [ ] caching embeddings
 - [ ] saving the index to IndexedDB or localStorage
 - [ ] list out the models we recommend

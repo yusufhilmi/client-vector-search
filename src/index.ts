@@ -111,6 +111,20 @@ export class EmbeddingIndex {
     this.objects.splice(index, 1);
   }
 
+  // Method to remove multiple vectors from the index
+  removeBatch(filters: { [key: string]: any }[]) {
+    filters.forEach((filter) => {
+      // Find the index of the vector with the given filter
+      const index = this.objects.findIndex((object) =>
+        Object.keys(filter).every((key) => object[key] === filter[key])
+      );
+      if (index !== -1) {
+        // Remove the vector from the index
+        this.objects.splice(index, 1);
+      }
+    });
+  }
+
   // Method to retrieve a vector from the index
   get(filter: { [key: string]: any }) {
     // Find the vector with the given filter
@@ -118,7 +132,7 @@ export class EmbeddingIndex {
       Object.keys(filter).every((key) => object[key] === filter[key])
     );
     if (!vector) {
-      throw new Error("Vector not found");
+      return null;
     }
     // Return the vector
     return vector;
