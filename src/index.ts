@@ -3,12 +3,21 @@
  * My first npm package, can use help about design patterns, best practices!
  */
 
+import Cache from './cache';
+
+const cacheInstance = Cache.getInstance();
+
 export const getEmbedding = async (
   text: string,
   precision: number = 7,
   options = { pooling: "mean", normalize: false },
-  model = "Xenova/gte-small"
+  model = "Xenova/gte-small",
 ): Promise<number[]> => {
+  const cachedEmbedding = cacheInstance.get(text);
+  if (cachedEmbedding) {
+    return Promise.resolve(cachedEmbedding);
+  }
+
   const transformersModule = await import("@xenova/transformers");
   const { pipeline } = transformersModule;
   const pipe = await pipeline("feature-extraction", model);
@@ -16,6 +25,7 @@ export const getEmbedding = async (
   const roundedOutput = Array.from(output.data as number[]).map(
     (value: number) => parseFloat(value.toFixed(precision))
   );
+  cacheInstance.set(text, roundedOutput);
   return Array.from(roundedOutput);
 };
 

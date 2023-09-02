@@ -37,7 +37,8 @@ We'll initially keep things super simple and sub 100ms
 - [x] reduce precision of embeddings, 7 decimal places is enough
   - increased search speed by 3x
   - reduced index size by 10x
-- [ ] caching embeddings
+- [x] caching embeddings
+  - LRU cache embedding
 - [ ] saving the index to IndexedDB or localStorage
 - [ ] list out the models we recommend
   - [ ] check their dimensions
