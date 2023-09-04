@@ -4,7 +4,11 @@
  */
 
 import Cache from './cache';
-import "fake-indexeddb/auto";
+// import "fake-indexeddb/auto";
+import { IDBFactory } from "fake-indexeddb";
+
+// Whenever you want a fresh indexedDB
+const indexedDB = new IDBFactory();
 
 const cacheInstance = Cache.getInstance();
 
@@ -178,6 +182,35 @@ export class EmbeddingIndex {
       console.log(`Item ${idx + 1}:`, obj);
     });
   }
+
+  async saveIndexToDB(DBname: string='defaultDB', objectStoreName: string='DefaultStore'): Promise<void> {
+    return new Promise((resolve, reject) => {
+      if (!this.objects || this.objects.length === 0) {
+        reject(new Error("Index is empty"));
+        return;
+      }
+
+      const db = new DynamicDB();
+      db.initializeDB(DBname)
+        .then(() => db.makeObjectStore(objectStoreName))
+        .then(() => {
+          this.objects.forEach((obj) => {
+            db.addToDB(objectStoreName, obj);
+          });
+          console.log("Index saved to database successfully");
+          resolve();
+        })
+        .catch((error) => {
+          console.error("Error saving index to database:", error);
+          reject(new Error("Error saving index to database"));
+        });
+    });
+  }
+  async loadIndexFromDB(DBname: string='defaultDB', objectStoreName: string='DefaultStore'): Promise<void> {
+    console.log(`Loading index from database ${DBname} and object store ${objectStoreName}`);
+    // use cursor and think about how to integrate 
+    // it with search or write a new search just for the indexed DB
+  }
 }
 
 
@@ -188,6 +221,12 @@ export class DynamicDB {
 
   async initializeDB(name: string): Promise<void> {
     return new Promise((resolve, reject) => {
+      if (this.db) {
+        console.log(`Database already initialized. Database version: ${this.version}`);
+        resolve();
+        return;
+      }
+
       const request = indexedDB.open(name, this.version);
 
       request.onerror = (event) => {
@@ -226,8 +265,11 @@ export class DynamicDB {
             objectStore.createIndex(`by_${index}`, index, { unique: false });
           }
           this.objectStores[name] = objectStore;
+          console.log(`Object store ${name} created in version ${this.version}`);
         }
-        console.log(`Object store ${name} created in version ${this.version}`);
+        else {
+          console.log(`Object store ${name} already exists`);
+        }
       };
 
       request.onsuccess = () => {

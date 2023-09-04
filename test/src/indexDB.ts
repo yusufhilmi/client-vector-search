@@ -1,4 +1,6 @@
-// basic run
+////////////////////////////////////////////////////////////////////////////////////
+// 1. BASIC RUN
+
 // import "fake-indexeddb/auto";
 
 // let db: IDBDatabase;
@@ -53,52 +55,71 @@ MVP:
 - how to implement search functionality
 */
 
-import { DynamicDB } from 'client-vector-search'
 
-const dbHandler = new DynamicDB();
-try {
-    await dbHandler.initializeDB("TestDB");
-    console.log("Database 'TestDB' initialized successfully");
-} catch (error) {
-    console.error("Error initializing 'TestDB' database:", error);
-}
+////////////////////////////////////////////////////////////////////////////////////
+///2.  DYNAMIC DB
+// import { DynamicDB } from 'client-vector-search'
 
-// Test creating an object store
-try {
-    //   await dbHandler.makeObjectStore("by_name", "name");
-    await dbHandler.makeObjectStore("TestStore")
-    console.log("'TestStore' object store created successfully");
-} catch (error) {
-    console.error("Error creating 'TestStore' object store:", error);
-}
+// const dbHandler = new DynamicDB();
+// try {
+//     await dbHandler.initializeDB("TestDB");
+//     console.log("Database 'TestDB' initialized successfully");
+// } catch (error) {
+//     console.error("Error initializing 'TestDB' database:", error);
+// }
 
-// // Test adding to the database
-try {
-    await dbHandler.addToDB("TestStore", { name: "Test1", value: "123" });
-    console.log("Data '{ name: \"Test1\", value: \"123\" }' added to 'TestStore' successfully");
-} catch (error) {
-    console.error("Error adding data to 'TestStore':", error);
-}
+// // Test creating an object store
+// try {
+//     //   await dbHandler.makeObjectStore("by_name", "name");
+//     await dbHandler.makeObjectStore("TestStore")
+//     console.log("'TestStore' object store created successfully");
+// } catch (error) {
+//     console.error("Error creating 'TestStore' object store:", error);
+// }
 
-try {
-    await dbHandler.makeObjectStore("TestStore2")
-    await dbHandler.addToDB("TestStore2", { name: "Test2", value: "456" });
-    console.log("Data '{ name: \"Test2\", value: \"456\" }' added to 'TestStore2' successfully");
-} catch (error) {
-    console.error("Error adding data to 'TestStore2':", error);
-}
+// // // Test adding to the database
+// try {
+//     await dbHandler.addToDB("TestStore", { name: "Test1", value: "123" });
+//     console.log("Data '{ name: \"Test1\", value: \"123\" }' added to 'TestStore' successfully");
+// } catch (error) {
+//     console.error("Error adding data to 'TestStore':", error);
+// }
 
-// show all objects in the database
-try {
+// try {
+//     await dbHandler.makeObjectStore("TestStore2")
+//     await dbHandler.addToDB("TestStore2", { name: "Test2", value: "456" });
+//     console.log("Data '{ name: \"Test2\", value: \"456\" }' added to 'TestStore2' successfully");
+// } catch (error) {
+//     console.error("Error adding data to 'TestStore2':", error);
+// }
 
-    const objects = await dbHandler.getAllFromDB("TestStore");
-    console.log("Objects in 'TestStore' database:", objects);
+// // show all objects in the database
+// try {
 
-    const objects2 = await dbHandler.getAllFromDB("TestStore2");
-    console.log("Objects in 'TestStore2' database:", objects2);
-}
-catch (error) {
-    console.error("Error getting objects from database:", error);
-}
+//     const objects = await dbHandler.getAllFromDB("TestStore");
+//     console.log("Objects in 'TestStore' database:", objects);
+
+//     const objects2 = await dbHandler.getAllFromDB("TestStore2");
+//     console.log("Objects in 'TestStore2' database:", objects2);
+// }
+// catch (error) {
+//     console.error("Error getting objects from database:", error);
+// }
+
+
+////////////////////////////////////////////////////////////////////////////////////
+// 3. EMBEDDING INDEX
+import { EmbeddingIndex } from 'client-vector-search'
+console.log("\n\nTesting EmbeddingIndex class...");
+
+
+const initialObjects = [
+  { id: 1, name: "Apple", embedding: [1, 2, 3] },
+  { id: 2, name: "Banana", embedding: [4, 5, 6] },
+];
+const index = new EmbeddingIndex(initialObjects);
+await index.saveIndexToDB();
+
+
 
 
