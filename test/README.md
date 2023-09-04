@@ -1,4 +1,11 @@
 # execute test files
 
-## Cache
-```npx ts-node --esm development/cache.ts```
+## test runs
+```npm run perf```
+```npm run test```
+
+## Cache files
+```cd test```
+
+```npx ts-node --esm src/cache.ts```
+

@@ -1,9 +1,10 @@
-/** Author: yusufhilmi
+/** Author: yusufhilmi, lurrobert
  * Let's keep everything here until it gets too big
  * My first npm package, can use help about design patterns, best practices!
  */
 
 import Cache from './cache';
+import "fake-indexeddb/auto";
 
 const cacheInstance = Cache.getInstance();
 
@@ -65,12 +66,6 @@ export class EmbeddingIndex {
   constructor(initialObjects?: { [key: string]: any }[]) {
     this.objects = [];
     this.keys = [];
-
-    // if (initialObjects  && initialObjects.length > 0) {
-    //   initialObjects.forEach((obj) => this.validateAndAdd(obj));
-    //   this.keys = Object.keys(initialObjects[0]);
-    //   // Find the index of the vector with the given filter
-    // }
     if (initialObjects && initialObjects.length > 0) {
       initialObjects.forEach((obj) => this.validateAndAdd(obj));
       if (initialObjects[0]) {
@@ -85,7 +80,9 @@ export class EmbeddingIndex {
         "Object must have an embedding property of type number[]"
       );
     }
-    if (!this.keys.every((key) => key in obj)) {
+    if (this.keys.length === 0) {
+      this.keys = Object.keys(obj);
+    } else if (!this.keys.every((key) => key in obj)) {
       throw new Error(
         "Object must have the same properties as the initial objects"
       );
@@ -181,4 +178,124 @@ export class EmbeddingIndex {
       console.log(`Item ${idx + 1}:`, obj);
     });
   }
+}
+
+
+export class DynamicDB {
+  private db: IDBDatabase | null = null;
+  private objectStores: { [key: string]: IDBObjectStore } = {};
+  private version: number = 1;
+
+  async initializeDB(name: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const request = indexedDB.open(name, this.version);
+
+      request.onerror = (event) => {
+        console.error("IndexedDB error:", event);
+        reject(new Error("Database initialization failed"));
+      };
+
+      request.onupgradeneeded = () => {
+        this.db = request.result;
+        console.log(`Upgrading database to version: ${this.version}`);
+      };
+
+      request.onsuccess = () => {
+        this.db = request.result;
+        this.version = this.db.version;
+        console.log(`IndexedDB initialized. Database version: ${this.version}`);
+        resolve();
+      };
+    });
+  }
+
+  async createNewVersion(name: string, index: string | null = null): Promise<void> {
+    if (this.db) {
+      this.db.close();
+    }
+    this.version++;
+
+    return new Promise((resolve, reject) => {
+      const request = indexedDB.open(this.db?.name || "defaultDB", this.version);
+
+      request.onupgradeneeded = () => {
+        this.db = request.result;
+        if (!this.db.objectStoreNames.contains(name)) {
+          const objectStore = this.db.createObjectStore(name, { autoIncrement: true });
+          if (index) {
+            objectStore.createIndex(`by_${index}`, index, { unique: false });
+          }
+          this.objectStores[name] = objectStore;
+        }
+        console.log(`Object store ${name} created in version ${this.version}`);
+      };
+
+      request.onsuccess = () => {
+        this.db = request.result;
+        resolve();
+      };
+
+      request.onerror = (event) => {
+        console.error("IndexedDB error:", event);
+        reject(new Error("Failed to create new version"));
+      };
+    });
+  }
+
+  async makeObjectStore(name: string, index: string | null = null): Promise<void> {
+    if (!this.db) {
+      throw new Error("Database not initialized");
+    }
+    console.log(`Creating object store ${name} in version ${this.version + 1}`);
+    await this.createNewVersion(name, index);
+  }
+  async addToDB(name: string, obj: { [key: string]: any }): Promise<void> {
+    return new Promise((resolve, reject) => {
+      if (!this.db) {
+        reject(new Error("Database not initialized"));
+        return;
+      }
+
+      if (!this.objectStores || !this.objectStores[name]) {
+        reject(new Error("Object store not initialized"));
+        return;
+      }
+
+      const transaction = this.db.transaction([name], "readwrite");
+      const objectStore = transaction.objectStore(name);
+      const request = objectStore.add(obj);
+
+      request.onsuccess = () => {
+        console.log("Object added successfully");
+        resolve();
+      };
+
+      request.onerror = (event) => {
+        console.error("Failed to add object", event);
+        reject(new Error("Failed to add object"));
+      };
+    });
+  }
+  async getAllFromDB(name: string): Promise<any> {
+    const transaction = this.db?.transaction([name], "readonly");
+    const objectStore = transaction?.objectStore(name);
+    return new Promise((resolve, reject) => {
+      if (!objectStore) {
+        reject(new Error("Object store not found"));
+        return;
+      }
+
+      const request = objectStore.getAll();
+
+      request.onsuccess = () => {
+        resolve(request.result);
+      };
+
+      request.onerror = (event) => {
+        console.error("Failed to get objects", event);
+        reject(new Error("Failed to get objects"));
+      };
+    });
+  }
+
 }
