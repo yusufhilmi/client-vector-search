@@ -4,13 +4,18 @@
  */
 
 import Cache from './cache';
+import { MinHeap } from './minHeap';
+
 // import "fake-indexeddb/auto";
 import { IDBFactory } from "fake-indexeddb";
-
 // Whenever you want a fresh indexedDB
 const indexedDB = new IDBFactory();
 
+
 const cacheInstance = Cache.getInstance();
+
+let versionDict: Record<string, number> = {};
+
 
 export const getEmbedding = async (
   text: string,
@@ -156,25 +161,33 @@ export class EmbeddingIndex {
 
   search(
     queryEmbedding: number[],
-    options: { topK?: number; filter?: { [key: string]: any } } = { topK: 3 }
+    options: { topK?: number; filter?: { [key: string]: any } } = { topK: 3 },
+    useDB: boolean = false,
+    DBname: string = 'defaultDB',
+    objectStoreName: string = 'DefaultStore'
   ) {
     const topK = options.topK || 3;
     const filter = options.filter || {};
 
-    // Compute similarities
-    const similarities = this.objects
-      .filter((object) =>
-        Object.keys(filter).every((key) => object[key] === filter[key])
-      )
-      .map((obj) => ({
-        similarity: cosineSimilarity(queryEmbedding, obj.embedding),
-        object: obj,
-      }));
+    if (useDB) {
+      return this.loadAndSearchFromDB(DBname, objectStoreName, queryEmbedding, topK, filter);
+    }
+    else {
+      // Compute similarities
+      const similarities = this.objects
+        .filter((object) =>
+          Object.keys(filter).every((key) => object[key] === filter[key])
+        )
+        .map((obj) => ({
+          similarity: cosineSimilarity(queryEmbedding, obj.embedding),
+          object: obj,
+        }));
 
-    // Sort by similarity and return topK results
-    return similarities
-      .sort((a, b) => b.similarity - a.similarity)
-      .slice(0, topK);
+      // Sort by similarity and return topK results
+      return similarities
+        .sort((a, b) => b.similarity - a.similarity)
+        .slice(0, topK);
+    }
   }
 
   printIndex() {
@@ -190,13 +203,14 @@ export class EmbeddingIndex {
         reject(new Error("Index is empty"));
         return;
       }
-      this.db.initializeDB(DBname)
-        .then(() => this.db.makeObjectStore(objectStoreName))
-        .then(() => {
+
+      this.db.makeObjectStore(DBname, objectStoreName)
+        .then( async () => {
           this.objects.forEach((obj) => {
             this.db.addToDB(objectStoreName, obj);
           });
           console.log(`Index saved to database '${DBname}' object store '${objectStoreName}'`);
+          await this.db.closeDB();
           resolve();
         })
         .catch((error) => {
@@ -206,14 +220,32 @@ export class EmbeddingIndex {
     });
   }
 
-  async loadIndexFromDB(objectStoreName: string = 'DefaultStore'): Promise<void> {
-    this.objects = [];
-
-    const generator = this.db.dbGenerator(objectStoreName);
+  async loadAndSearchFromDB(
+    DBname: string = 'defaultDB',
+    objectStoreName: string = 'DefaultStore',
+    queryEmbedding: number[],
+    topK: number,
+    filter: { [key: string]: any }
+  ): Promise<{ similarity: number, object: any }[]> {
+    const topKResults = new MinHeap<{ similarity: number, object: any }>((a, b) => a.similarity - b.similarity);
+  
+    const generator = this.db.dbGenerator(DBname, objectStoreName);
     for await (const record of generator) {
-      this.objects.push(record);
+      if (Object.keys(filter).every((key) => record[key] === filter[key])) {
+        const similarity = cosineSimilarity(queryEmbedding, record.embedding);
+        if (topKResults.size() < topK) {
+          topKResults.push({ similarity, object: record });
+        } else {
+          const peekResult = topKResults.peek();
+          if (peekResult && similarity > peekResult.similarity) {
+            topKResults.pop();
+            topKResults.push({ similarity, object: record });
+          }
+        }
+      }
     }
-    console.log(`Saved ${this.objects.length} objects to the IndexedDB`);
+    console.log(`Processed ${this.objects.length} objects from the IndexedDB`);
+    return topKResults.toArray().sort((a, b) => b.similarity - a.similarity);
   }
 }
 
@@ -223,6 +255,8 @@ export class DynamicDB {
   private version: number = 1;
 
   async initializeDB(name: string): Promise<void> {
+    this.version = await this.getLatestVersionOfDb(name)
+    console.log(`Initializing DB ${name} in version ${this.version}`);
     return new Promise((resolve, reject) => {
       if (this.db) {
         resolve();
@@ -248,31 +282,65 @@ export class DynamicDB {
     });
   }
 
-  async createNewVersion(name: string, index: string | null = null): Promise<void> {
+  async closeDB(): Promise<void> {
+    if (this.db) {
+      this.db.close();
+      this.db = null;
+    }
+  }
+
+
+  async getDB(DBname: string, objectStoreName: string): Promise<IDBDatabase> {
+    if (!this.db) {
+      await this.initializeDB(DBname);
+    }
+    else {
+      if (this.db.name !== DBname) {
+        await this.createNewVersion(DBname, objectStoreName);
+      }
+    }
+    return this.db as IDBDatabase;
+  }
+
+  async getLatestVersionOfDb(name: string): Promise<number> {
+    console.log(versionDict, name);
+    if (!this.db) {
+      return versionDict[name] ?? 1;
+    }
+    return versionDict[name] ?? this.db.version;
+  }
+
+    
+
+  async createNewVersion(DBname: string, objectStoreName: string, index: string | null = null): Promise<void> {
     if (this.db) {
       this.db.close();
     }
-    this.version++;
+    this.version = await this.getLatestVersionOfDb(DBname) + 1
+    console.log(`Upgraded DB ${DBname} to version ${this.version-1} -> ${this.version}`);
 
     return new Promise((resolve, reject) => {
-      const request = indexedDB.open(this.db?.name || "defaultDB", this.version);
+      const request = indexedDB.open(DBname, this.version);
+      
+      console.log(`Opened DB ${DBname} in version ${this.version}`);
 
       request.onupgradeneeded = () => {
         this.db = request.result;
-        if (!this.db.objectStoreNames.contains(name)) {
-          const objectStore = this.db.createObjectStore(name, { autoIncrement: true });
+        if (!this.db.objectStoreNames.contains(objectStoreName)) {
+          const objectStore = this.db.createObjectStore(objectStoreName, { autoIncrement: true });
           if (index) {
             objectStore.createIndex(`by_${index}`, index, { unique: false });
           }
-          this.objectStores[name] = objectStore;
+          this.objectStores[objectStoreName] = objectStore;
         }
         else {
-          console.log(`Object store ${name} already exists`);
+          console.log(`Object store ${objectStoreName} already exists`);
         }
       };
 
       request.onsuccess = () => {
         this.db = request.result;
+        versionDict[DBname] = this.db.version;
         resolve();
       };
 
@@ -283,13 +351,35 @@ export class DynamicDB {
     });
   }
 
-  async makeObjectStore(name: string, index: string | null = null): Promise<void> {
-    if (!this.db) {
-      throw new Error("Database not initialized");
-    }
-    console.log(`Creating object store ${name} in version ${this.version + 1}`);
-    await this.createNewVersion(name, index);
+  async getDBNames(): Promise<string[]> {
+    const databases = await indexedDB.databases();
+    return databases.filter(db => db.name !== undefined).map(db => db.name as string);
   }
+
+
+  async makeObjectStore(
+    DBname: string,
+    objectStoreName: string,
+    index: string | null = null
+  ): Promise<void> {
+    if (!this.db) {
+      const dbNames = await this.getDBNames();
+      console.log(dbNames);
+      if (dbNames.includes(DBname)) {
+        console.log(`Database ${DBname} exists. Setting it as a current`);
+        this.db = await this.getDB(DBname, objectStoreName);
+        // await this.createNewVersion(DBname, objectStoreName, index);
+        console.log(`Successfully set database ${DBname} as current`);
+      }
+      else {
+        console.log(`Database ${DBname} not initialized. Initializing`);
+        await this.initializeDB(DBname);
+    }
+    console.log(`Creating object store ${objectStoreName} in database ${DBname}`);
+    await this.createNewVersion(DBname, objectStoreName, index);
+  }
+}
+
   async addToDB(name: string, obj: { [key: string]: any }): Promise<void> {
     return new Promise((resolve, reject) => {
       if (!this.db) {
@@ -338,9 +428,15 @@ export class DynamicDB {
     });
   }
 
-  async *dbGenerator(objectStoreName: string): AsyncGenerator<any, void, undefined> {
+  async *dbGenerator(
+    DBname: string,
+    objectStoreName: string
+  ): AsyncGenerator<any, void, undefined> {
     if (!this.db) {
-      throw new Error("Database not initialized");
+      await this.initializeDB(DBname);
+      if (!this.db) {
+        throw new Error("Database not initialized");
+      }
     }
     const transaction = this.db.transaction([objectStoreName], 'readonly');
     const objectStore = transaction.objectStore(objectStoreName);
