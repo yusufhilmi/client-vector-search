@@ -116,10 +116,12 @@ console.log("\n\nTesting EmbeddingIndex class...");
 const initialObjects = [
   { id: 1, name: "Apple", embedding: [1, 2, 3] },
   { id: 2, name: "Banana", embedding: [4, 5, 6] },
+  { id: 3, name: "Cheddar", embedding: [7, 8, 9] },
 ];
 const index = new EmbeddingIndex(initialObjects);
 await index.saveIndexToDB();
 
-
+// testing reading from cursor generator
+await index.loadIndexFromDB();
 
 

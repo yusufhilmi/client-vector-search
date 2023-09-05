@@ -66,6 +66,7 @@ export const cosineSimilarity = (
 export class EmbeddingIndex {
   private objects: { [key: string]: any }[];
   private keys: string[];
+  private db: DynamicDB = new DynamicDB();
 
   constructor(initialObjects?: { [key: string]: any }[]) {
     this.objects = [];
@@ -183,21 +184,19 @@ export class EmbeddingIndex {
     });
   }
 
-  async saveIndexToDB(DBname: string='defaultDB', objectStoreName: string='DefaultStore'): Promise<void> {
+  async saveIndexToDB(DBname: string = 'defaultDB', objectStoreName: string = 'DefaultStore'): Promise<void> {
     return new Promise((resolve, reject) => {
       if (!this.objects || this.objects.length === 0) {
         reject(new Error("Index is empty"));
         return;
       }
-
-      const db = new DynamicDB();
-      db.initializeDB(DBname)
-        .then(() => db.makeObjectStore(objectStoreName))
+      this.db.initializeDB(DBname)
+        .then(() => this.db.makeObjectStore(objectStoreName))
         .then(() => {
           this.objects.forEach((obj) => {
-            db.addToDB(objectStoreName, obj);
+            this.db.addToDB(objectStoreName, obj);
           });
-          console.log("Index saved to database successfully");
+          console.log(`Index saved to database '${DBname}' object store '${objectStoreName}'`);
           resolve();
         })
         .catch((error) => {
@@ -206,13 +205,17 @@ export class EmbeddingIndex {
         });
     });
   }
-  async loadIndexFromDB(DBname: string='defaultDB', objectStoreName: string='DefaultStore'): Promise<void> {
-    console.log(`Loading index from database ${DBname} and object store ${objectStoreName}`);
-    // use cursor and think about how to integrate 
-    // it with search or write a new search just for the indexed DB
+
+  async loadIndexFromDB(objectStoreName: string = 'DefaultStore'): Promise<void> {
+    this.objects = [];
+
+    const generator = this.db.dbGenerator(objectStoreName);
+    for await (const record of generator) {
+      this.objects.push(record);
+    }
+    console.log(`Saved ${this.objects.length} objects to the IndexedDB`);
   }
 }
-
 
 export class DynamicDB {
   private db: IDBDatabase | null = null;
@@ -222,7 +225,6 @@ export class DynamicDB {
   async initializeDB(name: string): Promise<void> {
     return new Promise((resolve, reject) => {
       if (this.db) {
-        console.log(`Database already initialized. Database version: ${this.version}`);
         resolve();
         return;
       }
@@ -236,13 +238,11 @@ export class DynamicDB {
 
       request.onupgradeneeded = () => {
         this.db = request.result;
-        console.log(`Upgrading database to version: ${this.version}`);
       };
 
       request.onsuccess = () => {
         this.db = request.result;
         this.version = this.db.version;
-        console.log(`IndexedDB initialized. Database version: ${this.version}`);
         resolve();
       };
     });
@@ -265,7 +265,6 @@ export class DynamicDB {
             objectStore.createIndex(`by_${index}`, index, { unique: false });
           }
           this.objectStores[name] = objectStore;
-          console.log(`Object store ${name} created in version ${this.version}`);
         }
         else {
           console.log(`Object store ${name} already exists`);
@@ -308,7 +307,6 @@ export class DynamicDB {
       const request = objectStore.add(obj);
 
       request.onsuccess = () => {
-        console.log("Object added successfully");
         resolve();
       };
 
@@ -340,4 +338,34 @@ export class DynamicDB {
     });
   }
 
+  async *dbGenerator(objectStoreName: string): AsyncGenerator<any, void, undefined> {
+    if (!this.db) {
+      throw new Error("Database not initialized");
+    }
+    const transaction = this.db.transaction([objectStoreName], 'readonly');
+    const objectStore = transaction.objectStore(objectStoreName);
+    const request = objectStore.openCursor();
+
+    let promiseResolver: (value: any) => void;
+
+    request.onsuccess = function(event: Event) {
+      const cursor = (event.target as IDBRequest<IDBCursorWithValue>).result;
+      if (cursor) {
+        promiseResolver(cursor.value);
+        cursor.continue();
+      } else {
+        promiseResolver(null);
+      }
+    };
+
+    while (true) {
+      const promise = new Promise<any>((resolve) => {
+        promiseResolver = resolve;
+      });
+      const value = await promise;
+      if (value === null) break;
+      yield value;
+    }
+  }
 }
+
