@@ -170,6 +170,10 @@ export class EmbeddingIndex {
     const filter = options.filter || {};
 
     if (useDB) {
+      if (typeof indexedDB === 'undefined') {
+        console.error("IndexedDB is not supported");
+        throw new Error("IndexedDB is not supported");
+      }
       return this.loadAndSearchFromDB(DBname, objectStoreName, queryEmbedding, topK, filter);
     }
     else {
@@ -198,6 +202,10 @@ export class EmbeddingIndex {
   }
 
   async saveIndexToDB(DBname: string = 'defaultDB', objectStoreName: string = 'DefaultStore'): Promise<void> {
+    if (typeof indexedDB === 'undefined') {
+      console.error("IndexedDB is not defined");
+      throw new Error("IndexedDB is not supported");
+    }
     return new Promise((resolve, reject) => {
       if (!this.objects || this.objects.length === 0) {
         reject(new Error("Index is empty"));
@@ -244,7 +252,6 @@ export class EmbeddingIndex {
         }
       }
     }
-    console.log(`Processed ${this.objects.length} objects from the IndexedDB`);
     return topKResults.toArray().sort((a, b) => b.similarity - a.similarity);
   }
 }
@@ -256,7 +263,6 @@ export class DynamicDB {
 
   async initializeDB(name: string): Promise<void> {
     this.version = await this.getLatestVersionOfDb(name)
-    console.log(`Initializing DB ${name} in version ${this.version}`);
     return new Promise((resolve, reject) => {
       if (this.db) {
         resolve();
@@ -303,7 +309,6 @@ export class DynamicDB {
   }
 
   async getLatestVersionOfDb(name: string): Promise<number> {
-    console.log(versionDict, name);
     if (!this.db) {
       return versionDict[name] ?? 1;
     }
@@ -312,18 +317,13 @@ export class DynamicDB {
 
     
 
-  async createNewVersion(DBname: string, objectStoreName: string, index: string | null = null): Promise<void> {
-    if (this.db) {
-      this.db.close();
-    }
+  private async createNewVersion(DBname: string, objectStoreName: string, index: string | null = null): Promise<void> {
+    this.closeDB();
     this.version = await this.getLatestVersionOfDb(DBname) + 1
-    console.log(`Upgraded DB ${DBname} to version ${this.version-1} -> ${this.version}`);
 
     return new Promise((resolve, reject) => {
       const request = indexedDB.open(DBname, this.version);
       
-      console.log(`Opened DB ${DBname} in version ${this.version}`);
-
       request.onupgradeneeded = () => {
         this.db = request.result;
         if (!this.db.objectStoreNames.contains(objectStoreName)) {
@@ -333,9 +333,9 @@ export class DynamicDB {
           }
           this.objectStores[objectStoreName] = objectStore;
         }
-        else {
-          console.log(`Object store ${objectStoreName} already exists`);
-        }
+        // else {
+          // console.log(`Object store ${objectStoreName} already exists`);
+        // }
       };
 
       request.onsuccess = () => {
@@ -364,18 +364,12 @@ export class DynamicDB {
   ): Promise<void> {
     if (!this.db) {
       const dbNames = await this.getDBNames();
-      console.log(dbNames);
       if (dbNames.includes(DBname)) {
-        console.log(`Database ${DBname} exists. Setting it as a current`);
         this.db = await this.getDB(DBname, objectStoreName);
-        // await this.createNewVersion(DBname, objectStoreName, index);
-        console.log(`Successfully set database ${DBname} as current`);
       }
       else {
-        console.log(`Database ${DBname} not initialized. Initializing`);
         await this.initializeDB(DBname);
     }
-    console.log(`Creating object store ${objectStoreName} in database ${DBname}`);
     await this.createNewVersion(DBname, objectStoreName, index);
   }
 }
