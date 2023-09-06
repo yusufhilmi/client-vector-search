@@ -162,20 +162,28 @@ const index_1 = new EmbeddingIndex(initialObjects_1);
 await index_1.saveIndexToDB("defaultDB", "DefaultStore_1");
 
 const index_2 = new EmbeddingIndex(initialObjects_2);
-await index_2.saveIndexToDB("defaultDB", "DefaultStore_2");
+await index_2.saveIndexToDB("defaultDB2", "DefaultStore_2");
 
 
-let result = await index_1.loadAndSearchFromDB(
+// let result = await index_1.loadAndSearchFromDB(
+//   "defaultDB",
+//   "DefaultStore_1",
+//   [1, 0, 3],
+//   2,
+//   {}
+// )
+let result = await index_1.search(
+  [1, 0, 3],
+  {},
+  true,
   "defaultDB",
   "DefaultStore_1",
-  [1, 0, 3],
-  2,
-  {}
 )
 
 console.log("Search result 1:", result);
 
 // result = await index_2.loadAndSearchFromDB(
+//   "defaultDB2",
 //   "DefaultStore_2",
 //   [10, 11, 12],
 //   2,
