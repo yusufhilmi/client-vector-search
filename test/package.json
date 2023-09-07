@@ -5,8 +5,8 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "test": "ts-node --esm test.ts",
-    "perf": "ts-node --esm performance.ts"
+    "test": "ts-node --esm src/test.ts",
+    "perf": "ts-node --esm src/performance.ts"
   },
   "author": "",
   "license": "ISC",
@@ -14,6 +14,8 @@
     "ts-node": "^10.9.1"
   },
   "dependencies": {
-    "client-vector-search": "file:.."
+    "client-vector-search": "file:..",
+    "fake-indexeddb": "^4.0.2",
+    "lru-cache": "^10.0.1"
   }
 }

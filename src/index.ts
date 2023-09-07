@@ -1,14 +1,30 @@
-/** Author: yusufhilmi
+/** Author: yusufhilmi, lurrobert
  * Let's keep everything here until it gets too big
  * My first npm package, can use help about design patterns, best practices!
  */
+
+import Cache from './cache';
+import { MinHeap } from './minHeap';
+import { indexedDbManager } from './indexedDB';
+
+// uncomment for testing only
+// import { IDBFactory } from "fake-indexeddb";
+// const indexedDB = new IDBFactory();
+
+const cacheInstance = Cache.getInstance();
+
 
 export const getEmbedding = async (
   text: string,
   precision: number = 7,
   options = { pooling: "mean", normalize: false },
-  model = "Xenova/gte-small"
+  model = "Xenova/gte-small",
 ): Promise<number[]> => {
+  const cachedEmbedding = cacheInstance.get(text);
+  if (cachedEmbedding) {
+    return Promise.resolve(cachedEmbedding);
+  }
+
   const transformersModule = await import("@xenova/transformers");
   const { pipeline } = transformersModule;
   const pipe = await pipeline("feature-extraction", model);
@@ -16,6 +32,7 @@ export const getEmbedding = async (
   const roundedOutput = Array.from(output.data as number[]).map(
     (value: number) => parseFloat(value.toFixed(precision))
   );
+  cacheInstance.set(text, roundedOutput);
   return Array.from(roundedOutput);
 };
 
@@ -55,12 +72,6 @@ export class EmbeddingIndex {
   constructor(initialObjects?: { [key: string]: any }[]) {
     this.objects = [];
     this.keys = [];
-
-    // if (initialObjects  && initialObjects.length > 0) {
-    //   initialObjects.forEach((obj) => this.validateAndAdd(obj));
-    //   this.keys = Object.keys(initialObjects[0]);
-    //   // Find the index of the vector with the given filter
-    // }
     if (initialObjects && initialObjects.length > 0) {
       initialObjects.forEach((obj) => this.validateAndAdd(obj));
       if (initialObjects[0]) {
@@ -75,7 +86,9 @@ export class EmbeddingIndex {
         "Object must have an embedding property of type number[]"
       );
     }
-    if (!this.keys.every((key) => key in obj)) {
+    if (this.keys.length === 0) {
+      this.keys = Object.keys(obj);
+    } else if (!this.keys.every((key) => key in obj)) {
       throw new Error(
         "Object must have the same properties as the initial objects"
       );
@@ -144,25 +157,37 @@ export class EmbeddingIndex {
 
   search(
     queryEmbedding: number[],
-    options: { topK?: number; filter?: { [key: string]: any } } = { topK: 3 }
+    options: { topK?: number; filter?: { [key: string]: any } } = { topK: 3 },
+    useDB: boolean = false,
+    DBname: string = 'defaultDB',
+    objectStoreName: string = 'DefaultStore'
   ) {
     const topK = options.topK || 3;
     const filter = options.filter || {};
 
-    // Compute similarities
-    const similarities = this.objects
-      .filter((object) =>
-        Object.keys(filter).every((key) => object[key] === filter[key])
-      )
-      .map((obj) => ({
-        similarity: cosineSimilarity(queryEmbedding, obj.embedding),
-        object: obj,
-      }));
+    if (useDB) {
+      if (typeof indexedDB === 'undefined') {
+        console.error("IndexedDB is not supported");
+        throw new Error("IndexedDB is not supported");
+      }
+      return this.loadAndSearchFromDB(DBname, objectStoreName, queryEmbedding, topK, filter);
+    }
+    else {
+      // Compute similarities
+      const similarities = this.objects
+        .filter((object) =>
+          Object.keys(filter).every((key) => object[key] === filter[key])
+        )
+        .map((obj) => ({
+          similarity: cosineSimilarity(queryEmbedding, obj.embedding),
+          object: obj,
+        }));
 
-    // Sort by similarity and return topK results
-    return similarities
-      .sort((a, b) => b.similarity - a.similarity)
-      .slice(0, topK);
+      // Sort by similarity and return topK results
+      return similarities
+        .sort((a, b) => b.similarity - a.similarity)
+        .slice(0, topK);
+    }
   }
 
   printIndex() {
@@ -171,4 +196,96 @@ export class EmbeddingIndex {
       console.log(`Item ${idx + 1}:`, obj);
     });
   }
+
+  async saveIndexToDB(DBname: string = 'defaultDB', objectStoreName: string = 'DefaultStore'): Promise<void> {
+    if (typeof indexedDB === 'undefined') {
+      console.error("IndexedDB is not defined");
+      throw new Error("IndexedDB is not supported");
+    }
+    return new Promise(async (resolve, reject) => {
+      if (!this.objects || this.objects.length === 0) {
+        reject(new Error("Index is empty. Nothing to save"));
+        return;
+      }
+
+      const db = await indexedDbManager.create(DBname, objectStoreName);
+
+      await db.addToDB(this.objects).then(() => {
+        console.log(`Index saved to database '${DBname}' object store '${objectStoreName}'`);
+        resolve();
+      }).catch((error) => {
+        console.error("Error saving index to database:", error);
+        reject(new Error("Error saving index to database"));
+      });
+    });
+  }
+
+    async loadAndSearchFromDB(
+      DBname: string = 'defaultDB',
+      objectStoreName: string = 'DefaultStore',
+      queryEmbedding: number[],
+      topK: number,
+      filter: { [key: string]: any }
+    ): Promise<{ similarity: number, object: any }[]> {
+      const topKResults = new MinHeap<{ similarity: number, object: any }>((a, b) => a.similarity - b.similarity);
+      const db = await indexedDbManager.create(DBname, objectStoreName);
+      const generator = db.dbGenerator();
+
+      for await (const record of generator) {
+        if (Object.keys(filter).every((key) => record[key] === filter[key])) {
+          const similarity = cosineSimilarity(queryEmbedding, record.embedding);
+          if (topKResults.size() < topK) {
+            topKResults.push({ similarity, object: record });
+          } else {
+            const peekResult = topKResults.peek();
+            if (peekResult && similarity > peekResult.similarity) {
+              topKResults.pop();
+              topKResults.push({ similarity, object: record });
+            }
+          }
+        }
+      }
+      return topKResults.toArray().sort((a, b) => b.similarity - a.similarity);
+    }
+
+  async deleteDB(DBname: string): Promise<void> {
+    if (typeof indexedDB === 'undefined') {
+      console.error("IndexedDB is not defined");
+      throw new Error("IndexedDB is not supported");
+    }
+    return new Promise((resolve, reject) => {
+      const request = indexedDB.deleteDatabase(DBname);
+
+      request.onsuccess = () => {
+        console.log(`Database '${DBname}' deleted`);
+        resolve();
+      };
+      request.onerror = (event) => {
+        console.error("Failed to delete database", event);
+        reject(new Error("Failed to delete database"));
+      }
+    });
+  }
+
+  async deleteObjectStore(DBname: string, objectStoreName: string): Promise<void> {
+    const db = await indexedDbManager.create(DBname, objectStoreName);
+
+    try {
+      await db.deleteObjectStoreFromDB(DBname, objectStoreName);
+      console.log(`Object store '${objectStoreName}' deleted from database '${DBname}'`);
+    } catch (error) {
+      console.error("Error deleting object store:", error);
+      throw new Error("Error deleting object store");
+    }
+  }
+  
+  async getAllObjectsFromDB(DBname: string, objectStoreName: string): Promise<any[]> {
+    const db = await indexedDbManager.create(DBname, objectStoreName);
+    const objects: any[] = [];
+    for await (const record of db.dbGenerator()) {
+      objects.push(record);
+    }
+    return objects;
+  }
 }
+
