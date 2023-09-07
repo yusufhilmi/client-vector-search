@@ -18,5 +18,5 @@
 
 ### test interface
 
-1. go to `src/indexed-db-front` and run the npm script
+1. go to `src/indexed-db-front` and run the npm script ```npm run start```
 2. go the local host and test it out
