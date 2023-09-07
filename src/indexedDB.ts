@@ -1,6 +1,6 @@
 // uncomment for testing only
-import { IDBFactory } from "fake-indexeddb";
-const indexedDB = new IDBFactory();
+// import { IDBFactory } from "fake-indexeddb";
+// const indexedDB = new IDBFactory();
 
 
 export class IndexedDbManager {
@@ -169,7 +169,6 @@ export class IndexedDbManager {
           let db2 = request_2.result;
           if (db2.objectStoreNames.contains(objectStoreName)) {
             db2.deleteObjectStore(objectStoreName);
-            console.log(`Object store '${objectStoreName}' deleted from database '${DBname}'`);
           } else {
             console.error(`Object store '${objectStoreName}' not found in database '${DBname}'`);
             reject(new Error(`Object store '${objectStoreName}' not found in database '${DBname}'`));

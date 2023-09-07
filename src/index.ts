@@ -4,12 +4,11 @@
  */
 
 import Cache from './cache';
-import { MinHeap } from './minHeap';
 import { IndexedDbManager } from './indexedDB';
 
 // uncomment for testing only
-import { IDBFactory } from "fake-indexeddb";
-const indexedDB = new IDBFactory();
+// import { IDBFactory } from "fake-indexeddb";
+// const indexedDB = new IDBFactory();
 
 const cacheInstance = Cache.getInstance();
 
@@ -227,25 +226,18 @@ export class EmbeddingIndex {
       topK: number,
       filter: { [key: string]: any }
     ): Promise<{ similarity: number, object: any }[]> {
-      const topKResults = new MinHeap<{ similarity: number, object: any }>((a, b) => a.similarity - b.similarity);
       const db = await IndexedDbManager.create(DBname, objectStoreName);
       const generator = db.dbGenerator();
+      const results: { similarity: number, object: any }[] = [];
 
       for await (const record of generator) {
         if (Object.keys(filter).every((key) => record[key] === filter[key])) {
           const similarity = cosineSimilarity(queryEmbedding, record.embedding);
-          if (topKResults.size() < topK) {
-            topKResults.push({ similarity, object: record });
-          } else {
-            const peekResult = topKResults.peek();
-            if (peekResult && similarity > peekResult.similarity) {
-              topKResults.pop();
-              topKResults.push({ similarity, object: record });
-            }
-          }
+          results.push({ similarity, object: record });
         }
       }
-      return topKResults.toArray().sort((a, b) => b.similarity - a.similarity);
+      results.sort((a, b) => b.similarity - a.similarity);
+      return results.slice(0, topK);
     }
 
   async deleteDB(DBname: string): Promise<void> {
