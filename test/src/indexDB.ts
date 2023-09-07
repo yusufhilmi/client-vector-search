@@ -160,9 +160,10 @@ const initialObjects_2 = [
 
 const index_1 = new EmbeddingIndex(initialObjects_1);
 await index_1.saveIndexToDB("defaultDB", "DefaultStore_1");
-
+console.log("index_1", index_1);
 const index_2 = new EmbeddingIndex(initialObjects_2);
 await index_2.saveIndexToDB("defaultDB2", "DefaultStore_2");
+
 
 
 let result = await index_1.loadAndSearchFromDB(
@@ -183,4 +184,8 @@ result = await index_2.loadAndSearchFromDB(
 )
 
 console.log("Search result 2:", result);
+
+// // deleting object stores
+
+await index_1.deleteObjectStore("defaultDB2", "DefaultStore_2");
 

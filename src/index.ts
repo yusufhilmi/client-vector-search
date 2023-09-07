@@ -5,16 +5,13 @@
 
 import Cache from './cache';
 import { MinHeap } from './minHeap';
-
+import { indexedDbManager } from './indexedDB';
 
 // uncomment for testing only
 // import { IDBFactory } from "fake-indexeddb";
 // const indexedDB = new IDBFactory();
 
-
 const cacheInstance = Cache.getInstance();
-
-let versionDict: Record<string, number> = {};
 
 
 export const getEmbedding = async (
@@ -71,7 +68,6 @@ export const cosineSimilarity = (
 export class EmbeddingIndex {
   private objects: { [key: string]: any }[];
   private keys: string[];
-  private db: DynamicDB = new DynamicDB();
 
   constructor(initialObjects?: { [key: string]: any }[]) {
     this.objects = [];
@@ -206,52 +202,51 @@ export class EmbeddingIndex {
       console.error("IndexedDB is not defined");
       throw new Error("IndexedDB is not supported");
     }
-    return new Promise((resolve, reject) => {
+    return new Promise(async (resolve, reject) => {
       if (!this.objects || this.objects.length === 0) {
-        reject(new Error("Index is empty"));
+        reject(new Error("Index is empty. Nothing to save"));
         return;
       }
 
-      this.db.makeObjectStore(DBname, objectStoreName)
-        .then( async () => {
-          this.db.addToDB(DBname, objectStoreName, this.objects);
-          console.log(`Index saved to database '${DBname}' object store '${objectStoreName}'`);
-          this.db.closeDB();
-          resolve();
-        })
-        .catch((error) => {
-          console.error("Error saving index to database:", error);
-          reject(new Error("Error saving index to database"));
-        });
+      const db = await indexedDbManager.create(DBname, objectStoreName);
+
+      await db.addToDB(this.objects).then(() => {
+        console.log(`Index saved to database '${DBname}' object store '${objectStoreName}'`);
+        resolve();
+      }).catch((error) => {
+        console.error("Error saving index to database:", error);
+        reject(new Error("Error saving index to database"));
+      });
     });
   }
 
-  async loadAndSearchFromDB(
-    DBname: string = 'defaultDB',
-    objectStoreName: string = 'DefaultStore',
-    queryEmbedding: number[],
-    topK: number,
-    filter: { [key: string]: any }
-  ): Promise<{ similarity: number, object: any }[]> {
-    const topKResults = new MinHeap<{ similarity: number, object: any }>((a, b) => a.similarity - b.similarity);
-  
-    const generator = this.db.dbGenerator(DBname, objectStoreName);
-    for await (const record of generator) {
-      if (Object.keys(filter).every((key) => record[key] === filter[key])) {
-        const similarity = cosineSimilarity(queryEmbedding, record.embedding);
-        if (topKResults.size() < topK) {
-          topKResults.push({ similarity, object: record });
-        } else {
-          const peekResult = topKResults.peek();
-          if (peekResult && similarity > peekResult.similarity) {
-            topKResults.pop();
+    async loadAndSearchFromDB(
+      DBname: string = 'defaultDB',
+      objectStoreName: string = 'DefaultStore',
+      queryEmbedding: number[],
+      topK: number,
+      filter: { [key: string]: any }
+    ): Promise<{ similarity: number, object: any }[]> {
+      const topKResults = new MinHeap<{ similarity: number, object: any }>((a, b) => a.similarity - b.similarity);
+      const db = await indexedDbManager.create(DBname, objectStoreName);
+      const generator = db.dbGenerator();
+
+      for await (const record of generator) {
+        if (Object.keys(filter).every((key) => record[key] === filter[key])) {
+          const similarity = cosineSimilarity(queryEmbedding, record.embedding);
+          if (topKResults.size() < topK) {
             topKResults.push({ similarity, object: record });
+          } else {
+            const peekResult = topKResults.peek();
+            if (peekResult && similarity > peekResult.similarity) {
+              topKResults.pop();
+              topKResults.push({ similarity, object: record });
+            }
           }
         }
       }
+      return topKResults.toArray().sort((a, b) => b.similarity - a.similarity);
     }
-    return topKResults.toArray().sort((a, b) => b.similarity - a.similarity);
-  }
 
   async deleteDB(DBname: string): Promise<void> {
     if (typeof indexedDB === 'undefined') {
@@ -264,242 +259,33 @@ export class EmbeddingIndex {
       request.onsuccess = () => {
         console.log(`Database '${DBname}' deleted`);
         resolve();
-        this.db.closeDB();
       };
-
       request.onerror = (event) => {
         console.error("Failed to delete database", event);
         reject(new Error("Failed to delete database"));
       }
     });
   }
+
+  async deleteObjectStore(DBname: string, objectStoreName: string): Promise<void> {
+    const db = await indexedDbManager.create(DBname, objectStoreName);
+
+    try {
+      await db.deleteObjectStoreFromDB(DBname, objectStoreName);
+      console.log(`Object store '${objectStoreName}' deleted from database '${DBname}'`);
+    } catch (error) {
+      console.error("Error deleting object store:", error);
+      throw new Error("Error deleting object store");
+    }
+  }
   
-  async getAllObjectsFromDB(DBname: string, objectStoreName: string): Promise<any> {
-    if (typeof indexedDB === 'undefined') {
-      console.error("IndexedDB is not defined");
-      throw new Error("IndexedDB is not supported");
+  async getAllObjectsFromDB(DBname: string, objectStoreName: string): Promise<any[]> {
+    const db = await indexedDbManager.create(DBname, objectStoreName);
+    const objects: any[] = [];
+    for await (const record of db.dbGenerator()) {
+      objects.push(record);
     }
-    return new Promise((resolve, reject) => {
-          this.db.getAllFromDB(DBname, objectStoreName)
-            .then((objects) => {
-              resolve(objects);
-              this.db.closeDB();
-            })
-            .catch((error) => {
-              console.error("Error getting all objects from database:", error);
-              reject(new Error("Error getting all objects from database"));
-            });
-        })
-  }
-}
-
-export class DynamicDB {
-  private db: IDBDatabase | null = null;
-
-  async initializeDB(name: string): Promise<void> {
-    return new Promise((resolve, reject) => {
-      if (this.db) {
-        resolve();
-        return;
-      }
-
-      const request = indexedDB.open(name, undefined);
-
-      request.onerror = (event) => {
-        console.error("IndexedDB error:", event);
-        reject(new Error("Database initialization failed"));
-      };
-
-      request.onupgradeneeded = () => {
-        this.db = request.result;
-      };
-
-      request.onsuccess = () => {
-        this.db = request.result;
-        resolve();
-      };
-    });
-  }
-
-  closeDB(): number {
-    if (this.db) {
-      this.db.close();
-      let version = this.db.version as number;
-      if (version === undefined) {
-        version = 0;
-      }
-      this.db = null;
-      return version
-    }
-    return 0;
-  }
-
-
-  async getDB(DBname: string, objectStoreName: string): Promise<IDBDatabase> {
-    if (!this.db) {
-      await this.initializeDB(DBname);
-    }
-    else {
-      if (this.db.name !== DBname) {
-        await this.createNewVersion(DBname, objectStoreName);
-      }
-    }
-    return this.db as IDBDatabase;
-  }    
-
-  private async createNewVersion(DBname: string, objectStoreName: string, index: string | null = null): Promise<void> {
-    let latestVersion =this.closeDB();
-
-    return new Promise((resolve, reject) => {
-      const request = indexedDB.open(DBname, latestVersion+1);
-      
-      request.onupgradeneeded = () => {
-        this.db = request.result;
-        if (!this.db.objectStoreNames.contains(objectStoreName)) {
-          const objectStore = this.db.createObjectStore(objectStoreName, { autoIncrement: true });
-          if (index) {
-            objectStore.createIndex(`by_${index}`, index, { unique: false });
-          }
-        }
-      };
-
-      request.onsuccess = () => {
-        this.db = request.result;
-        versionDict[DBname] = this.db.version;
-        resolve();
-      };
-
-      request.onerror = (event) => {
-        console.error("IndexedDB error:", event);
-        reject(new Error("Failed to create new version"));
-      };
-    });
-  }
-
-  async getDBNames(): Promise<string[]> {
-    const databases = await indexedDB.databases();
-    return databases.filter(db => db.name !== undefined).map(db => db.name as string);
-  }
-
-
-  async makeObjectStore(
-    DBname: string,
-    objectStoreName: string,
-    index: string | null = null
-  ): Promise<void> {
-    if (!this.db) {
-      const dbNames = await this.getDBNames();
-      if (dbNames.includes(DBname)) {
-        this.db = await this.getDB(DBname, objectStoreName);
-      }
-      else {
-        await this.initializeDB(DBname);
-    }
-    await this.createNewVersion(DBname, objectStoreName, index);
-  }
-}
-
-  async addToDB(DBname: string, objectStoreName: string, objs: { [key: string]: any }[] | { [key: string]: any }): Promise<void> {
-    return new Promise((resolve, reject) => {
-      if (!this.db) {
-        this.initializeDB(DBname);
-        if (!this.db) {
-          reject(new Error(`Problem initializing database ${DBname}`));
-          return;
-        }
-      }
-      if (!this.db.objectStoreNames.contains(objectStoreName)) {
-        this.makeObjectStore(DBname, objectStoreName);
-        if (!this.db.objectStoreNames.contains(objectStoreName)) {
-          reject(new Error(`Problem initializing object store ${objectStoreName}`));
-          return;
-        }
-      }
-
-      const transaction = this.db.transaction([objectStoreName], "readwrite");
-      const objectStore = transaction.objectStore(objectStoreName);
-
-      if (!Array.isArray(objs)) {
-        objs = [objs];
-      }
-
-      objs.forEach((obj: { [key: string]: any }) => {
-          const request = objectStore.add(obj);
-
-        request.onerror = (event) => {
-          console.error("Failed to add object", event);
-          reject(new Error("Failed to add object"));
-        };
-      });
-
-      transaction.oncomplete = () => {
-        resolve();
-      };
-    });
-  }
-
-  async getAllFromDB(DBname: string, objectStoreName: string): Promise<any> {
-    if (!this.db) {
-      await this.initializeDB(DBname);
-      if (!this.db) {
-        throw new Error("Database not initialized");
-      }
-    }
-    const transaction = this.db?.transaction([objectStoreName], "readonly");
-    const objectStore = transaction?.objectStore(objectStoreName);
-    return new Promise((resolve, reject) => {
-      if (!objectStore) {
-        reject(new Error("Object store not found"));
-        return;
-      }
-
-      const request = objectStore.getAll();
-
-      request.onsuccess = () => {
-        resolve(request.result);
-      };
-
-      request.onerror = (event) => {
-        console.error("Failed to get objects", event);
-        reject(new Error("Failed to get objects"));
-      };
-    });
-  }
-
-  async *dbGenerator(
-    DBname: string,
-    objectStoreName: string
-  ): AsyncGenerator<any, void, undefined> {
-    if (!this.db) {
-      await this.initializeDB(DBname);
-      if (!this.db) {
-        throw new Error("Database not initialized");
-      }
-    }
-    const transaction = this.db.transaction([objectStoreName], 'readonly');
-    const objectStore = transaction.objectStore(objectStoreName);
-    const request = objectStore.openCursor();
-
-    let promiseResolver: (value: any) => void;
-
-    request.onsuccess = function(event: Event) {
-      const cursor = (event.target as IDBRequest<IDBCursorWithValue>).result;
-      if (cursor) {
-        promiseResolver(cursor.value);
-        cursor.continue();
-      } else {
-        promiseResolver(null);
-      }
-    };
-
-    while (true) {
-      const promise = new Promise<any>((resolve) => {
-        promiseResolver = resolve;
-      });
-      const value = await promise;
-      if (value === null) break;
-      yield value;
-    }
+    return objects;
   }
 }
 
