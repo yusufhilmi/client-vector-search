@@ -12,8 +12,6 @@ class Cache {
             length: () => 1,
             maxAge: maxAge
             };
-        
-            console.log("Initializing cache with max: " + max + " and maxAge: " + maxAge);
             Cache.instance = new LRUCache<string, any[]>(options);
       }
       return Cache.instance;

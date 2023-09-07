@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "client-vector-search": "file:..",
+    "fake-indexeddb": "^4.0.2",
     "lru-cache": "^10.0.1"
   }
 }

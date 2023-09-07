@@ -39,7 +39,8 @@ We'll initially keep things super simple and sub 100ms
   - reduced index size by 10x
 - [x] caching embeddings
   - LRU cache embedding
-- [ ] saving the index to IndexedDB or localStorage
+- [x] saving the index to [IndexedDB]([IndexedDB](https://developer.mozilla.org/en-US/docs/Web/API/IndexedDB_API))
+- [ ] localStorage
 - [ ] list out the models we recommend
   - [ ] check their dimensions
 - [ ] test the performance of embedding times, indexing and search
@@ -108,4 +109,21 @@ npm install client-vector-search
   // Step 9: Print the entire index
   // Be careful: This will print all objects in the index, which might be a large output for large indexes
   index.printIndex(); // Prints the content of the index
+
+  // step 10: Save index to persistent
+  // Collects all objects saved in EmbeddingIndex and saved them to the database
+  // here you have the option to save/append into different DBs and different ObjectStoreName
+  await index.saveIndexToDB("dbName", "ObjectStoreName");
+
+  // Important: You have to specify additional paramaters if you want to search in indexedDB. here is how you can do it.
+  const results = await index.search(
+    queryEmbedding,
+    { topK: 5 },
+    true, // useDB: boolean
+    'dbName', // DBname: string
+    'ObjectStoreName' // objectStoreName: string
+  )
+
+  // 
+
 ```
