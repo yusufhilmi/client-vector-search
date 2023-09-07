@@ -5,11 +5,11 @@
 
 import Cache from './cache';
 import { MinHeap } from './minHeap';
-import { indexedDbManager } from './indexedDB';
+import { IndexedDbManager } from './indexedDB';
 
 // uncomment for testing only
-// import { IDBFactory } from "fake-indexeddb";
-// const indexedDB = new IDBFactory();
+import { IDBFactory } from "fake-indexeddb";
+const indexedDB = new IDBFactory();
 
 const cacheInstance = Cache.getInstance();
 
@@ -208,7 +208,7 @@ export class EmbeddingIndex {
         return;
       }
 
-      const db = await indexedDbManager.create(DBname, objectStoreName);
+      const db = await IndexedDbManager.create(DBname, objectStoreName)
 
       await db.addToDB(this.objects).then(() => {
         console.log(`Index saved to database '${DBname}' object store '${objectStoreName}'`);
@@ -228,7 +228,7 @@ export class EmbeddingIndex {
       filter: { [key: string]: any }
     ): Promise<{ similarity: number, object: any }[]> {
       const topKResults = new MinHeap<{ similarity: number, object: any }>((a, b) => a.similarity - b.similarity);
-      const db = await indexedDbManager.create(DBname, objectStoreName);
+      const db = await IndexedDbManager.create(DBname, objectStoreName);
       const generator = db.dbGenerator();
 
       for await (const record of generator) {
@@ -268,7 +268,7 @@ export class EmbeddingIndex {
   }
 
   async deleteObjectStore(DBname: string, objectStoreName: string): Promise<void> {
-    const db = await indexedDbManager.create(DBname, objectStoreName);
+    const db = await IndexedDbManager.create(DBname, objectStoreName);
 
     try {
       await db.deleteObjectStoreFromDB(DBname, objectStoreName);
@@ -280,7 +280,7 @@ export class EmbeddingIndex {
   }
   
   async getAllObjectsFromDB(DBname: string, objectStoreName: string): Promise<any[]> {
-    const db = await indexedDbManager.create(DBname, objectStoreName);
+    const db = await IndexedDbManager.create(DBname, objectStoreName);
     const objects: any[] = [];
     for await (const record of db.dbGenerator()) {
       objects.push(record);

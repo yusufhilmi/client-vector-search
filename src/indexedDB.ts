@@ -1,20 +1,23 @@
 // uncomment for testing only
-// import { IDBFactory } from "fake-indexeddb";
-// const indexedDB = new IDBFactory();
+import { IDBFactory } from "fake-indexeddb";
+const indexedDB = new IDBFactory();
 
 
-export class indexedDbManager {
+export class IndexedDbManager {
   private DBname!: string;
   private objectStoreName!: string
+
+  constructor(DBname: string, objectStoreName: string) {
+    this.DBname = DBname;
+    this.objectStoreName = objectStoreName;
+  }
 
   static async create(
     DBname: string = 'defaultDB',
     objectStoreName: string = 'DefaultStore',
     index: string | null = null
-  ): Promise<indexedDbManager> {
-    const instance = new indexedDbManager();
-    instance.DBname = DBname
-    instance.objectStoreName = objectStoreName
+  ): Promise<IndexedDbManager> {
+    const instance = new IndexedDbManager(DBname, objectStoreName)
     return new Promise((resolve, reject) => {
       const request = indexedDB.open(DBname);
       let db: IDBDatabase;
@@ -28,7 +31,7 @@ export class indexedDbManager {
         db = request.result;
         if (!db.objectStoreNames.contains(objectStoreName)) {
           db.close()
-          await instance.createObjectStore(objectStoreName, index);
+          await instance.createObjectStore(index);
         }
         db.close()
         resolve(instance);
@@ -37,7 +40,7 @@ export class indexedDbManager {
   }
 
 
-  async createObjectStore(objectStoreName: string, index: string | null = null): Promise<void> {
+  async createObjectStore(index: string | null = null): Promise<void> {
     return new Promise((resolve, reject) => {
       const request = indexedDB.open(this.DBname)
       request.onsuccess = () => {
@@ -47,8 +50,8 @@ export class indexedDbManager {
         const request_2 = indexedDB.open(this.DBname, version + 1);
         request_2.onupgradeneeded = async () => {
           let db2 = request_2.result;
-          if (!db2.objectStoreNames.contains(objectStoreName)) {
-            const objectStore = db2.createObjectStore(objectStoreName, { autoIncrement: true });
+          if (!db2.objectStoreNames.contains(this.objectStoreName)) {
+            const objectStore = db2.createObjectStore(this.objectStoreName, { autoIncrement: true });
             if (index) {
               objectStore.createIndex(`by_${index}`, index, { unique: false });
             }

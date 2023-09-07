@@ -59,71 +59,134 @@ We'll initially keep things super simple and sub 100ms
 npm install client-vector-search
 ```
 
-## Usage
+## Usage Guide
+
+### Step 1: Generate Embeddings for String
+Generate embeddings for a given string using the `getEmbedding` method. 
 
 ```ts
-  import { getEmbedding, cosineSimilarity, EmbeddingIndex } from 'client-vector-search';
+const embedding = await getEmbedding("Apple"); // Returns embedding as number[]
+```
+> **Note**: `getEmbedding` is asynchronous; make sure to use `await`.
 
-  // Step 1: Generate embeddings for string
-  // Be careful: getEmbedding is an async function, so you need to use 'await' or '.then()' to get the result
-  const embedding = await getEmbedding("Apple"); // Returns embedding as number[]
+---
 
-  // Step 2: Calculate cosine similarity between two embeddings
-  // Be careful: Both embeddings should be of the same length
-  const similarity = cosineSimilarity(embedding1, embedding2, 6); // vecA, vecB: number[], precision: number (optional)
+### Step 2: Calculate Cosine Similarity
+Calculate the cosine similarity between two embeddings.
 
-  // Step 3: Create an index with initial objects
-  // Be careful: Each object should have an 'embedding' property of type number[]
-  const initialObjects = [
-  { id: 1, name: "Apple", embedding: await getEmbedding("Apple") },
-  { id: 2, name: "Banana", embedding: await getEmbedding("Banana") },
-  { id: 3, name: "Cheddar", embedding: await getEmbedding("Cheddar")},
-  { id: 4, name: "Space", embedding: await getEmbedding("Space")},
-  { id: 5, name: "database", embedding: await getEmbedding("database")},
-  ];
-  const index = new EmbeddingIndex(initialObjects); // Creates an index
+```ts
+const similarity = cosineSimilarity(embedding1, embedding2, 6);
+```
+> **Note**: Both embeddings should be of the same length.
 
-  // Step 4: Add an object to the index
-  // Be careful: The object should have an 'embedding' property of type number[]
-  const objectToAdd = { id: 6, name: 'Cat', embedding: await getEmbedding('Cat') };
-  index.add(objectToAdd); // Adds object with 'embedding' property
+---
 
-  // Step 5: Update an existing vector in the index
-  // Be careful: The filter should match an existing object in the index
-  const vectorToUpdate = { id: 6, name: 'Dog', embedding: await getEmbedding('Dog') };
-  index.update({ id: 6 }, vectorToUpdate); // Updates the vector of the object that matches the filter
+### Step 3: Create an Index
+Create an index with an initial array of objects. Each object must have an 'embedding' property.
 
-  // Step 6: Remove a vector from the index
-  // Be careful: The filter should match an existing object in the index
-  index.remove({ id: 6 }); // Removes the object that matches the filter from the index
+```ts
+const initialObjects = [...];
+const index = new EmbeddingIndex(initialObjects); 
+```
 
-  // Step 7: Retrieve a vector from the index
-  // Be careful: The filter should match an existing object in the index
-  const vector = index.get({ id: 1 }); // Retrieves the object that matches the filter from the index
+---
 
-  // Step 8: Search the index with a query embedding
-  // Be careful: The query should be an embedding of type number[]
-  const queryEmbedding = await getEmbedding('Fruit'); // Query embedding
-  const results = index.search(queryEmbedding, { topK: 5 }); // Returns top similar objects
+### Step 4: Add to Index
+Add an object to the index.
 
-  // Step 9: Print the entire index
-  // Be careful: This will print all objects in the index, which might be a large output for large indexes
-  index.printIndex(); // Prints the content of the index
+```ts
+const objectToAdd = { id: 6, name: 'Cat', embedding: await getEmbedding('Cat') };
+index.add(objectToAdd); 
+```
 
-  // step 10: Save index to persistent
-  // Collects all objects saved in EmbeddingIndex and saved them to the database
-  // here you have the option to save/append into different DBs and different ObjectStoreName
-  await index.saveIndexToDB("dbName", "ObjectStoreName");
+---
 
-  // Important: You have to specify additional paramaters if you want to search in indexedDB. here is how you can do it.
-  const results = await index.search(
-    queryEmbedding,
-    { topK: 5 },
-    true, // useDB: boolean
-    'dbName', // DBname: string
-    'ObjectStoreName' // objectStoreName: string
-  )
+### Step 5: Update Index
+Update an existing object in the index.
 
-  // 
+```ts
+const vectorToUpdate = { id: 6, name: 'Dog', embedding: await getEmbedding('Dog') };
+index.update({ id: 6 }, vectorToUpdate);
+```
 
+---
+
+### Step 6: Remove from Index
+Remove an object from the index.
+
+```ts
+index.remove({ id: 6 });
+```
+
+---
+
+### Step 7: Retrieve from Index
+Retrieve an object from the index.
+
+```ts
+const vector = index.get({ id: 1 });
+```
+
+---
+
+### Step 8: Search the Index
+Search the index with a query embedding.
+
+```ts
+const queryEmbedding = await getEmbedding('Fruit');
+const results = index.search(queryEmbedding, { topK: 5 });
+```
+
+---
+
+### Step 9: Print the Index
+Print the entire index to the console.
+
+```ts
+index.printIndex();
+```
+
+---
+
+### Step 10: Save to Database
+Save the index to a persistent IndexedDB database.
+
+```ts
+await index.saveIndexToDB("dbName", "ObjectStoreName");
+```
+
+---
+
+### Important: Search in Database
+Perform a search operation in the IndexedDB.
+
+```ts
+const results = await index.search(queryEmbedding, { topK: 5 }, true, 'dbName', 'ObjectStoreName');
+```
+
+---
+
+### Delete Database
+To delete an entire database.
+
+```ts
+await IndexedDbManager.deleteDB("dbName");
+```
+
+---
+
+### Delete Object Store
+To delete an object store from a database.
+
+```ts
+await IndexedDbManager.deleteObjectStore("dbName", "ObjectStoreName");
+```
+
+---
+
+### Retrieve All Objects
+To retrieve all objects from a specific object store.
+
+```ts
+const allObjects = await IndexedDbManager.getAllObjectsFromDB("dbName", "ObjectStoreName");
 ```
