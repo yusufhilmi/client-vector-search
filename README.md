@@ -56,13 +56,48 @@ We'll initially keep things super simple and sub 100ms
 ## Installation
 
 ```bash
-npm install client-vector-search
+npm i client-vector-search
 ```
+
+
+## Quickstart
+
+This library provides a plug-and-play solution for embedding and vector search. It's designed to be easy to use, efficient, and versatile. Here's a quick start guide:
+
+
+```ts
+  import { getEmbedding, EmbeddingIndex } from 'client-vector-search';
+
+  // getEmbedding is an async function, so you need to use 'await' or '.then()' to get the result
+  const embedding = await getEmbedding("Apple"); // Returns embedding as number[]
+
+  // Each object should have an 'embedding' property of type number[]
+  const initialObjects = [
+  { id: 1, name: "Apple", embedding: embedding },
+  { id: 2, name: "Banana", embedding: await getEmbedding("Banana") },
+  { id: 3, name: "Cheddar", embedding: await getEmbedding("Cheddar")},
+  { id: 4, name: "Space", embedding: await getEmbedding("Space")},
+  { id: 5, name: "database", embedding: await getEmbedding("database")},
+  ];
+  const index = new EmbeddingIndex(initialObjects); // Creates an index
+
+  // The query should be an embedding of type number[]
+  const queryEmbedding = await getEmbedding('Fruit'); // Query embedding
+  const results = index.search(queryEmbedding, { topK: 5 }); // Returns top similar objects
+
+```
+
 
 ## Usage Guide
 
+This guide provides a step-by-step walkthrough of the library's main features. It covers everything from generating embeddings for a string to performing operations on the index such as adding, updating, and removing objects. It also includes instructions on how to save the index to a database and perform search operations within it.
+
+Until we have a reference documentation, you can find all the methods and their usage in this guide. Each step is accompanied by a code snippet to illustrate the usage of the method in question. Make sure to follow along and try out the examples in your own environment to get a better understanding of how everything works.
+
+Let's get started!
+
 ### Step 1: Generate Embeddings for String
-Generate embeddings for a given string using the `getEmbedding` method. 
+Generate embeddings for a given string using the `getEmbedding` method.
 
 ```ts
 const embedding = await getEmbedding("Apple"); // Returns embedding as number[]
@@ -86,7 +121,7 @@ Create an index with an initial array of objects. Each object must have an 'embe
 
 ```ts
 const initialObjects = [...];
-const index = new EmbeddingIndex(initialObjects); 
+const index = new EmbeddingIndex(initialObjects);
 ```
 
 ---
@@ -96,7 +131,7 @@ Add an object to the index.
 
 ```ts
 const objectToAdd = { id: 6, name: 'Cat', embedding: await getEmbedding('Cat') };
-index.add(objectToAdd); 
+index.add(objectToAdd);
 ```
 
 ---
