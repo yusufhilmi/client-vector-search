@@ -2,10 +2,9 @@
 // import { IDBFactory } from "fake-indexeddb";
 // const indexedDB = new IDBFactory();
 
-
 export class IndexedDbManager {
   private DBname!: string;
-  private objectStoreName!: string
+  private objectStoreName!: string;
 
   constructor(DBname: string, objectStoreName: string) {
     this.DBname = DBname;
@@ -15,34 +14,33 @@ export class IndexedDbManager {
   static async create(
     DBname: string = 'defaultDB',
     objectStoreName: string = 'DefaultStore',
-    index: string | null = null
+    index: string | null = null,
   ): Promise<IndexedDbManager> {
-    const instance = new IndexedDbManager(DBname, objectStoreName)
+    const instance = new IndexedDbManager(DBname, objectStoreName);
     return new Promise((resolve, reject) => {
       const request = indexedDB.open(DBname);
       let db: IDBDatabase;
 
       request.onerror = (event) => {
-        console.error("IndexedDB error:", event);
-        reject(new Error("Database initialization failed"));
+        console.error('IndexedDB error:', event);
+        reject(new Error('Database initialization failed'));
       };
 
       request.onsuccess = async () => {
         db = request.result;
         if (!db.objectStoreNames.contains(objectStoreName)) {
-          db.close()
+          db.close();
           await instance.createObjectStore(index);
         }
-        db.close()
+        db.close();
         resolve(instance);
       };
     });
   }
 
-
   async createObjectStore(index: string | null = null): Promise<void> {
     return new Promise((resolve, reject) => {
-      const request = indexedDB.open(this.DBname)
+      const request = indexedDB.open(this.DBname);
       request.onsuccess = () => {
         let db1 = request.result;
         var version = db1.version;
@@ -51,7 +49,9 @@ export class IndexedDbManager {
         request_2.onupgradeneeded = async () => {
           let db2 = request_2.result;
           if (!db2.objectStoreNames.contains(this.objectStoreName)) {
-            const objectStore = db2.createObjectStore(this.objectStoreName, { autoIncrement: true });
+            const objectStore = db2.createObjectStore(this.objectStoreName, {
+              autoIncrement: true,
+            });
             if (index) {
               objectStore.createIndex(`by_${index}`, index, { unique: false });
             }
@@ -59,29 +59,31 @@ export class IndexedDbManager {
         };
         request_2.onsuccess = async () => {
           let db2 = request_2.result;
-          console.log("Object store creation successful");
+          console.log('Object store creation successful');
           db2.close();
           resolve();
-        }
+        };
         request_2.onerror = (event) => {
-          console.error("Error creating object store:", event);
-          reject(new Error("Error creating object store"));
-        }
-      }
+          console.error('Error creating object store:', event);
+          reject(new Error('Error creating object store'));
+        };
+      };
       request.onerror = (event) => {
-        console.error("Error opening database:", event);
-        reject(new Error("Error opening database"));
-      }
+        console.error('Error opening database:', event);
+        reject(new Error('Error opening database'));
+      };
     });
   }
 
-  async addToDB(objs: { [key: string]: any }[] | { [key: string]: any }): Promise<void> {
+  async addToDB(
+    objs: { [key: string]: any }[] | { [key: string]: any },
+  ): Promise<void> {
     return new Promise(async (resolve, reject) => {
       const request = indexedDB.open(this.DBname);
 
       request.onsuccess = async () => {
         let db = request.result;
-        const transaction = db.transaction([this.objectStoreName], "readwrite");
+        const transaction = db.transaction([this.objectStoreName], 'readwrite');
         const objectStore = transaction.objectStore(this.objectStoreName);
 
         if (!Array.isArray(objs)) {
@@ -92,25 +94,23 @@ export class IndexedDbManager {
           const request = objectStore.add(obj);
 
           request.onerror = (event) => {
-            console.error("Failed to add object", event);
-            throw new Error("Failed to add object");
+            console.error('Failed to add object', event);
+            throw new Error('Failed to add object');
           };
-        })
+        });
 
         transaction.oncomplete = () => {
           resolve();
-        }
+        };
 
         transaction.onerror = (event) => {
-          console.error("Failed to add object", event);
-          reject(new Error("Failed to add object"));
-        }
+          console.error('Failed to add object', event);
+          reject(new Error('Failed to add object'));
+        };
         db.close();
-      }
+      };
     });
   }
-
-
 
   async *dbGenerator(): AsyncGenerator<any, void, undefined> {
     const objectStoreName = this.objectStoreName;
@@ -118,10 +118,10 @@ export class IndexedDbManager {
       const request = indexedDB.open(this.DBname);
       request.onsuccess = () => {
         resolve(request.result);
-      }
+      };
       request.onerror = () => {
-        reject(new Error("Could not open DB"));
-      }
+        reject(new Error('Could not open DB'));
+      };
     });
 
     try {
@@ -153,10 +153,13 @@ export class IndexedDbManager {
 
       db.close();
     } catch (error) {
-      console.error("An error occurred:", error);
+      console.error('An error occurred:', error);
     }
   }
-  async deleteObjectStoreFromDB(DBname: string, objectStoreName: string): Promise<void> {
+  async deleteObjectStoreFromDB(
+    DBname: string,
+    objectStoreName: string,
+  ): Promise<void> {
     return new Promise(async (resolve, reject) => {
       const request = indexedDB.open(this.DBname);
 
@@ -170,28 +173,33 @@ export class IndexedDbManager {
           if (db2.objectStoreNames.contains(objectStoreName)) {
             db2.deleteObjectStore(objectStoreName);
           } else {
-            console.error(`Object store '${objectStoreName}' not found in database '${DBname}'`);
-            reject(new Error(`Object store '${objectStoreName}' not found in database '${DBname}'`));
+            console.error(
+              `Object store '${objectStoreName}' not found in database '${DBname}'`,
+            );
+            reject(
+              new Error(
+                `Object store '${objectStoreName}' not found in database '${DBname}'`,
+              ),
+            );
           }
-        }
+        };
         request_2.onsuccess = () => {
           let db2 = request_2.result;
-          console.log("Object store deletion successful");
+          console.log('Object store deletion successful');
           db2.close();
           resolve();
-        }
+        };
         request_2.onerror = (event) => {
-
-          console.error("Failed to delete object store", event);
+          console.error('Failed to delete object store', event);
           let db2 = request_2.result;
           db2.close();
-          reject(new Error("Failed to delete object store"));
-        }
-      }
+          reject(new Error('Failed to delete object store'));
+        };
+      };
       request.onerror = (event) => {
-        console.error("Failed to open database", event);
-        reject(new Error("Failed to open database"));
-      }
+        console.error('Failed to open database', event);
+        reject(new Error('Failed to open database'));
+      };
     });
   }
 }
