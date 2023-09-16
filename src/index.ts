@@ -10,6 +10,11 @@ import { IndexedDbManager } from './indexedDB';
 // import { IDBFactory } from "fake-indexeddb";
 // const indexedDB = new IDBFactory();
 
+interface SearchResult {
+  similarity: number;
+  object: any;
+}
+
 const cacheInstance = Cache.getInstance();
 
 export const getEmbedding = async (
@@ -153,13 +158,13 @@ export class EmbeddingIndex {
     return vector;
   }
 
-  search(
+  async search(
     queryEmbedding: number[],
     options: { topK?: number; filter?: { [key: string]: any } } = { topK: 3 },
     useDB: boolean = false,
     DBname: string = 'defaultDB',
     objectStoreName: string = 'DefaultStore',
-  ) {
+  ): Promise<SearchResult[]> {
     const topK = options.topK || 3;
     const filter = options.filter || {};
 
@@ -168,13 +173,14 @@ export class EmbeddingIndex {
         console.error('IndexedDB is not supported');
         throw new Error('IndexedDB is not supported');
       }
-      return this.loadAndSearchFromDB(
+      const results = await this.loadAndSearchFromDB(
         DBname,
         objectStoreName,
         queryEmbedding,
         topK,
         filter,
       );
+      return results;
     } else {
       // Compute similarities
       const similarities = this.objects
@@ -237,7 +243,7 @@ export class EmbeddingIndex {
     queryEmbedding: number[],
     topK: number,
     filter: { [key: string]: any },
-  ): Promise<{ similarity: number; object: any }[]> {
+  ): Promise<SearchResult[]> {
     const db = await IndexedDbManager.create(DBname, objectStoreName);
     const generator = db.dbGenerator();
     const results: { similarity: number; object: any }[] = [];
