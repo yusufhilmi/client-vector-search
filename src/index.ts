@@ -32,6 +32,18 @@ interface SearchOptions {
 
 const cacheInstance = Cache.getInstance();
 
+let currentModel: string;
+let transformersModule: any;
+
+export const initializeModel = async (
+  model: string = 'Xenova/gte-small',
+): Promise<void> => {
+  if (model !== currentModel) {
+    transformersModule = await import('@xenova/transformers');
+    currentModel = model;
+  }
+};
+
 export const getEmbedding = async (
   text: string,
   precision: number = 7,
@@ -43,7 +55,9 @@ export const getEmbedding = async (
     return Promise.resolve(cachedEmbedding);
   }
 
-  const transformersModule = await import('@xenova/transformers');
+  if (model !== currentModel) {
+    await initializeModel(model);
+  }
   const { pipeline } = transformersModule;
   const pipe = await pipeline('feature-extraction', model);
   const output = await pipe(text, options);
