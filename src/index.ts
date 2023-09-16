@@ -2,6 +2,11 @@
  * Let's keep everything here until it gets too big
  * My first npm package, can use help about design patterns, best practices!
  */
+const DEFAULT_TOP_K = 3;
+
+interface Filter {
+  [key: string]: any;
+}
 
 import Cache from './cache';
 import { IndexedDbManager } from './indexedDB';
@@ -25,7 +30,7 @@ type StorageOptions = 'indexedDB' | 'localStorage' | 'none';
  */
 interface SearchOptions {
   topK?: number;
-  filter?: { [key: string]: any };
+  filter?: Filter;
   useStorage?: StorageOptions;
   storageOptions?: { indexedDBName: string; indexedDBObjectStoreName: string }; // TODO: generalize it to localStorage as well
 }
@@ -98,11 +103,11 @@ export const cosineSimilarity = (
 };
 
 export class EmbeddingIndex {
-  private objects: { [key: string]: any }[];
+  private objects: Filter[];
   private keys: string[];
 
+  constructor(initialObjects?: Filter[]) {
   // TODO: add support for options while creating index such as  {... indexedDB: true, ...}
-  constructor(initialObjects?: { [key: string]: any }[]) {
     this.objects = [];
     this.keys = [];
     if (initialObjects && initialObjects.length > 0) {
@@ -113,7 +118,13 @@ export class EmbeddingIndex {
     }
   }
 
-  private validateAndAdd(obj: { [key: string]: any }) {
+  private findVectorIndex(filter: Filter): number {
+    return this.objects.findIndex((object) =>
+      Object.keys(filter).every((key) => object[key] === filter[key])
+    );
+  }
+
+  private validateAndAdd(obj: Filter) {
     if (!Array.isArray(obj.embedding) || obj.embedding.some(isNaN)) {
       throw new Error(
         'Object must have an embedding property of type number[]',
@@ -129,16 +140,13 @@ export class EmbeddingIndex {
     this.objects.push(obj);
   }
 
-  add(obj: { [key: string]: any }) {
+  add(obj: Filter) {
     this.validateAndAdd(obj);
   }
 
   // Method to update an existing vector in the index
-  update(filter: { [key: string]: any }, vector: { [key: string]: any }) {
-    // Find the index of the vector with the given filter
-    const index = this.objects.findIndex((object) =>
-      Object.keys(filter).every((key) => object[key] === filter[key]),
-    );
+  update(filter: Filter, vector: Filter) {
+    const index = this.findVectorIndex(filter);
     if (index === -1) {
       throw new Error('Vector not found');
     }
@@ -149,11 +157,8 @@ export class EmbeddingIndex {
   }
 
   // Method to remove a vector from the index
-  remove(filter: { [key: string]: any }) {
-    // Find the index of the vector with the given filter
-    const index = this.objects.findIndex((object) =>
-      Object.keys(filter).every((key) => object[key] === filter[key]),
-    );
+  remove(filter: Filter) {
+    const index = this.findVectorIndex(filter);
     if (index === -1) {
       throw new Error('Vector not found');
     }
@@ -162,12 +167,9 @@ export class EmbeddingIndex {
   }
 
   // Method to remove multiple vectors from the index
-  removeBatch(filters: { [key: string]: any }[]) {
+  removeBatch(filters: Filter[]) {
     filters.forEach((filter) => {
-      // Find the index of the vector with the given filter
-      const index = this.objects.findIndex((object) =>
-        Object.keys(filter).every((key) => object[key] === filter[key]),
-      );
+      const index = this.findVectorIndex(filter);
       if (index !== -1) {
         // Remove the vector from the index
         this.objects.splice(index, 1);
@@ -176,16 +178,9 @@ export class EmbeddingIndex {
   }
 
   // Method to retrieve a vector from the index
-  get(filter: { [key: string]: any }) {
-    // Find the vector with the given filter
-    const vector = this.objects.find((object) =>
-      Object.keys(filter).every((key) => object[key] === filter[key]),
-    );
-    if (!vector) {
-      return null;
-    }
-    // Return the vector
-    return vector;
+  get(filter: Filter) {
+    const vector = this.objects[this.findVectorIndex(filter)];
+    return vector || null;
   }
 
   async search(
@@ -199,7 +194,7 @@ export class EmbeddingIndex {
       },
     },
   ): Promise<SearchResult[]> {
-    const topK = options.topK || 3;
+    const topK = options.topK || DEFAULT_TOP_K;
     const filter = options.filter || {};
     const useStorage = options.useStorage || 'none';
 
