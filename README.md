@@ -183,21 +183,27 @@ index.printIndex();
 
 ---
 
-### Step 10: Save to Database
-Save the index to a persistent IndexedDB database.
+### Step 10: Save Index to IndexedDB (for browser)
+Save the index to a persistent IndexedDB database. Note
 
 ```ts
-await index.saveToIndexedDB("clientVectorDB", "ClientEmbeddingStore");
+await index.saveIndex("indexedDB", { DBName: "clientVectorDB", objectStoreName:"ClientEmbeddingStore"})
 ```
 
 ---
 
-### Important: Search in Database
+### Important: Search in indexedDB
 Perform a search operation in the IndexedDB.
 
 ```ts
-const results = await index.search(queryEmbedding, { topK: 5 }, true, 'clientVectorDB', 'ClientEmbeddingStore');
-```
+const results = await index.search(queryEmbedding, {
+  topK: 5,
+  useStorage: "indexedDB",
+  storageOptions: { // only if you want to override the default options, defaults are below
+    indexedDBName: 'clientVectorDB',
+    indexedDBObjectStoreName: 'ClientEmbeddingStore'
+  }
+});
 
 ---
 
