@@ -83,8 +83,22 @@ This library provides a plug-and-play solution for embedding and vector search. 
 
   // The query should be an embedding of type number[]
   const queryEmbedding = await getEmbedding('Fruit'); // Query embedding
-  const results = index.search(queryEmbedding, { topK: 5 }); // Returns top similar objects
+  const results = await index.search(queryEmbedding, { topK: 5 }); // Returns top similar objects
 
+  //
+  await index.saveIndex('indexedDB');
+  const results = await index.search([1, 2, 3], {
+    topK: 5,
+    useStorage: 'indexedDB',
+    // storageOptions: { // use only if you overrode the defaults
+    //   indexedDBName: 'clientVectorDB',
+    //   indexedDBObjectStoreName: 'ClientEmbeddingStore',
+    // },
+  });
+
+  console.log(results);
+
+  await index.deleteIndexedDB(); // if you overrode default, specify db name
 ```
 
 
@@ -169,7 +183,7 @@ Search the index with a query embedding.
 
 ```ts
 const queryEmbedding = await getEmbedding('Fruit');
-const results = index.search(queryEmbedding, { topK: 5 });
+const results = await index.search(queryEmbedding, { topK: 5 });
 ```
 
 ---

@@ -87,6 +87,7 @@ export class EmbeddingIndex {
   private objects: { [key: string]: any }[];
   private keys: string[];
 
+  // TODO: add support for options while creating index such as  {... indexedDB: true, ...}
   constructor(initialObjects?: { [key: string]: any }[]) {
     this.objects = [];
     this.keys = [];
