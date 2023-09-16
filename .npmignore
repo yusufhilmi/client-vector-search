@@ -5,3 +5,6 @@ mock/
 .DS_Store
 .pytest_cache/
 test*/
+
+.github/
+.changeset/

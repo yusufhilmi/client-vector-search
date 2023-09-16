@@ -7,6 +7,7 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsup src/index.ts --format cjs,esm --dts",
+    "dev": "tsup src/index.ts --format cjs,esm --dts --watch",
     "release": "npm run build && changeset publish",
     "lint": "tsc"
   },
@@ -29,10 +30,12 @@
   "homepage": "https://github.com/yusufhilmi/client-vector-search#readme",
   "devDependencies": {
     "@changesets/cli": "^2.26.2",
+    "fake-indexeddb": "^4.0.2",
     "tsup": "^6.5.0",
     "typescript": "^4.9.5"
   },
   "dependencies": {
-    "@xenova/transformers": "^2.5.2"
+    "@xenova/transformers": "^2.5.2",
+    "lru-cache": "^10.0.1"
   }
 }
