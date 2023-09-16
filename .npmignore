@@ -1,0 +1,10 @@
+node_modules
+dist
+test.js
+mock/
+.DS_Store
+.pytest_cache/
+test*/
+
+.github/
+.changeset/
