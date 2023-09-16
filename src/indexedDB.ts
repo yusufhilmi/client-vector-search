@@ -1,5 +1,5 @@
 // uncomment for testing only
-// import { IDBFactory } from "fake-indexeddb";
+// import { IDBFactory } from 'fake-indexeddb';
 // const indexedDB = new IDBFactory();
 
 export class IndexedDbManager {
@@ -12,8 +12,8 @@ export class IndexedDbManager {
   }
 
   static async create(
-    DBname: string = 'defaultDB',
-    objectStoreName: string = 'DefaultStore',
+    DBname: string = 'clientVectorDB',
+    objectStoreName: string = 'ClientEmbeddingStore',
     index: string | null = null,
   ): Promise<IndexedDbManager> {
     const instance = new IndexedDbManager(DBname, objectStoreName);
@@ -75,7 +75,7 @@ export class IndexedDbManager {
     });
   }
 
-  async addToDB(
+  async addToIndexedDB(
     objs: { [key: string]: any }[] | { [key: string]: any },
   ): Promise<void> {
     return new Promise(async (resolve, reject) => {
@@ -156,7 +156,7 @@ export class IndexedDbManager {
       console.error('An error occurred:', error);
     }
   }
-  async deleteObjectStoreFromDB(
+  async deleteIndexedDBObjectStoreFromDB(
     DBname: string,
     objectStoreName: string,
   ): Promise<void> {

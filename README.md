@@ -187,7 +187,7 @@ index.printIndex();
 Save the index to a persistent IndexedDB database.
 
 ```ts
-await index.saveIndexToDB("dbName", "ObjectStoreName");
+await index.saveToIndexedDB("clientVectorDB", "ClientEmbeddingStore");
 ```
 
 ---
@@ -196,7 +196,7 @@ await index.saveIndexToDB("dbName", "ObjectStoreName");
 Perform a search operation in the IndexedDB.
 
 ```ts
-const results = await index.search(queryEmbedding, { topK: 5 }, true, 'dbName', 'ObjectStoreName');
+const results = await index.search(queryEmbedding, { topK: 5 }, true, 'clientVectorDB', 'ClientEmbeddingStore');
 ```
 
 ---
@@ -205,7 +205,7 @@ const results = await index.search(queryEmbedding, { topK: 5 }, true, 'dbName', 
 To delete an entire database.
 
 ```ts
-await IndexedDbManager.deleteDB("dbName");
+await IndexedDbManager.deleteIndexedDB("clientVectorDB");
 ```
 
 ---
@@ -214,7 +214,7 @@ await IndexedDbManager.deleteDB("dbName");
 To delete an object store from a database.
 
 ```ts
-await IndexedDbManager.deleteObjectStore("dbName", "ObjectStoreName");
+await IndexedDbManager.deleteIndexedDBObjectStore("clientVectorDB", "ClientEmbeddingStore");
 ```
 
 ---
@@ -223,5 +223,5 @@ await IndexedDbManager.deleteObjectStore("dbName", "ObjectStoreName");
 To retrieve all objects from a specific object store.
 
 ```ts
-const allObjects = await IndexedDbManager.getAllObjectsFromDB("dbName", "ObjectStoreName");
+const allObjects = await IndexedDbManager.getAllObjectsFromIndexedDB("clientVectorDB", "ClientEmbeddingStore");
 ```

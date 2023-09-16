@@ -7,7 +7,7 @@ import Cache from './cache';
 import { IndexedDbManager } from './indexedDB';
 
 // uncomment for testing only
-// import { IDBFactory } from "fake-indexeddb";
+// import { IDBFactory } from 'fake-indexeddb';
 // const indexedDB = new IDBFactory();
 
 interface SearchResult {
@@ -162,8 +162,8 @@ export class EmbeddingIndex {
     queryEmbedding: number[],
     options: { topK?: number; filter?: { [key: string]: any } } = { topK: 3 },
     useDB: boolean = false,
-    DBname: string = 'defaultDB',
-    objectStoreName: string = 'DefaultStore',
+    DBname: string = 'clientVectorDB',
+    objectStoreName: string = 'ClientEmbeddingStore',
   ): Promise<SearchResult[]> {
     const topK = options.topK || 3;
     const filter = options.filter || {};
@@ -173,7 +173,7 @@ export class EmbeddingIndex {
         console.error('IndexedDB is not supported');
         throw new Error('IndexedDB is not supported');
       }
-      const results = await this.loadAndSearchFromDB(
+      const results = await this.loadAndSearchFromIndexedDB(
         DBname,
         objectStoreName,
         queryEmbedding,
@@ -206,9 +206,25 @@ export class EmbeddingIndex {
     });
   }
 
-  async saveIndexToDB(
-    DBname: string = 'defaultDB',
-    objectStoreName: string = 'DefaultStore',
+  async saveIndex(
+    storageType: string,
+    options: { DBName: string; objectStoreName: string } = {
+      DBName: 'clientVectorDB',
+      objectStoreName: 'ClientEmbeddingStore',
+    },
+  ) {
+    if (storageType === 'indexedDB') {
+      await this.saveToIndexedDB(options.DBName, options.objectStoreName);
+    } else {
+      throw new Error(
+        `Unsupported storage type: ${storageType} \n Supported storage types: "indexedDB"`,
+      );
+    }
+  }
+
+  async saveToIndexedDB(
+    DBname: string = 'clientVectorDB',
+    objectStoreName: string = 'ClientEmbeddingStore',
   ): Promise<void> {
     if (typeof indexedDB === 'undefined') {
       console.error('IndexedDB is not defined');
@@ -223,7 +239,7 @@ export class EmbeddingIndex {
       const db = await IndexedDbManager.create(DBname, objectStoreName);
 
       await db
-        .addToDB(this.objects)
+        .addToIndexedDB(this.objects)
         .then(() => {
           console.log(
             `Index saved to database '${DBname}' object store '${objectStoreName}'`,
@@ -237,9 +253,9 @@ export class EmbeddingIndex {
     });
   }
 
-  async loadAndSearchFromDB(
-    DBname: string = 'defaultDB',
-    objectStoreName: string = 'DefaultStore',
+  async loadAndSearchFromIndexedDB(
+    DBname: string = 'clientVectorDB',
+    objectStoreName: string = 'ClientEmbeddingStore',
     queryEmbedding: number[],
     topK: number,
     filter: { [key: string]: any },
@@ -258,7 +274,7 @@ export class EmbeddingIndex {
     return results.slice(0, topK);
   }
 
-  async deleteDB(DBname: string): Promise<void> {
+  async deleteIndexedDB(DBname: string): Promise<void> {
     if (typeof indexedDB === 'undefined') {
       console.error('IndexedDB is not defined');
       throw new Error('IndexedDB is not supported');
@@ -277,14 +293,14 @@ export class EmbeddingIndex {
     });
   }
 
-  async deleteObjectStore(
+  async deleteIndexedDBObjectStore(
     DBname: string,
     objectStoreName: string,
   ): Promise<void> {
     const db = await IndexedDbManager.create(DBname, objectStoreName);
 
     try {
-      await db.deleteObjectStoreFromDB(DBname, objectStoreName);
+      await db.deleteIndexedDBObjectStoreFromDB(DBname, objectStoreName);
       console.log(
         `Object store '${objectStoreName}' deleted from database '${DBname}'`,
       );
@@ -294,7 +310,7 @@ export class EmbeddingIndex {
     }
   }
 
-  async getAllObjectsFromDB(
+  async getAllObjectsFromIndexedDB(
     DBname: string,
     objectStoreName: string,
   ): Promise<any[]> {
