@@ -85,7 +85,7 @@ This library provides a plug-and-play solution for embedding and vector search. 
   const queryEmbedding = await getEmbedding('Fruit'); // Query embedding
   const results = await index.search(queryEmbedding, { topK: 5 }); // Returns top similar objects
 
-  //
+  // specify the storage type
   await index.saveIndex('indexedDB');
   const results = await index.search([1, 2, 3], {
     topK: 5,
