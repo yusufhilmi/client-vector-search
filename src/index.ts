@@ -266,27 +266,21 @@ export class EmbeddingIndex {
       console.error('IndexedDB is not defined');
       throw new Error('IndexedDB is not supported');
     }
-    return new Promise(async (resolve, reject) => {
-      if (!this.objects || this.objects.length === 0) {
-        reject(new Error('Index is empty. Nothing to save'));
-        return;
-      }
 
+    if (!this.objects || this.objects.length === 0) {
+      throw new Error('Index is empty. Nothing to save');
+    }
+
+    try {
       const db = await IndexedDbManager.create(DBname, objectStoreName);
-
-      await db
-        .addToIndexedDB(this.objects)
-        .then(() => {
-          console.log(
-            `Index saved to database '${DBname}' object store '${objectStoreName}'`,
-          );
-          resolve();
-        })
-        .catch((error) => {
-          console.error('Error saving index to database:', error);
-          reject(new Error('Error saving index to database'));
-        });
-    });
+      await db.addToIndexedDB(this.objects);
+      console.log(
+        `Index saved to database '${DBname}' object store '${objectStoreName}'`,
+      );
+    } catch (error) {
+      console.error('Error saving index to database:', error);
+      throw new Error('Error saving index to database');
+    }
   }
 
   async loadAndSearchFromIndexedDB(
