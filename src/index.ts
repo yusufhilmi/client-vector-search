@@ -37,14 +37,16 @@ interface SearchOptions {
 
 const cacheInstance = Cache.getInstance();
 
+let pipe: any;
 let currentModel: string;
-let transformersModule: any;
 
 export const initializeModel = async (
   model: string = 'Xenova/gte-small',
 ): Promise<void> => {
   if (model !== currentModel) {
-    transformersModule = await import('@xenova/transformers');
+    const transformersModule = await import('@xenova/transformers');
+    const pipeline = transformersModule.pipeline;
+    pipe = await pipeline('feature-extraction', model);
     currentModel = model;
   }
 };
@@ -63,8 +65,7 @@ export const getEmbedding = async (
   if (model !== currentModel) {
     await initializeModel(model);
   }
-  const { pipeline } = transformersModule;
-  const pipe = await pipeline('feature-extraction', model);
+
   const output = await pipe(text, options);
   const roundedOutput = Array.from(output.data as number[]).map(
     (value: number) => parseFloat(value.toFixed(precision)),
@@ -107,7 +108,7 @@ export class EmbeddingIndex {
   private keys: string[];
 
   constructor(initialObjects?: Filter[]) {
-  // TODO: add support for options while creating index such as  {... indexedDB: true, ...}
+    // TODO: add support for options while creating index such as  {... indexedDB: true, ...}
     this.objects = [];
     this.keys = [];
     if (initialObjects && initialObjects.length > 0) {
@@ -120,7 +121,7 @@ export class EmbeddingIndex {
 
   private findVectorIndex(filter: Filter): number {
     return this.objects.findIndex((object) =>
-      Object.keys(filter).every((key) => object[key] === filter[key])
+      Object.keys(filter).every((key) => object[key] === filter[key]),
     );
   }
 
