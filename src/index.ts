@@ -15,7 +15,7 @@ import { IndexedDbManager } from './indexedDB';
 // import { IDBFactory } from 'fake-indexeddb';
 // const indexedDB = new IDBFactory();
 
-interface SearchResult {
+export interface SearchResult {
   similarity: number;
   object: any;
 }
