@@ -101,6 +101,25 @@ This library provides a plug-and-play solution for embedding and vector search. 
   await index.deleteIndexedDB(); // if you overrode default, specify db name
 ```
 
+## Trouble-shooting
+
+### NextJS
+To use it inside NextJS projects you'll need to update the `next.config.js` file to include the following:
+
+```js
+module.exports = {
+  // Override the default webpack configuration
+  webpack: (config) => {
+    // See https://webpack.js.org/configuration/resolve/#resolvealias
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      sharp$: false,
+      "onnxruntime-node$": false,
+    };
+    return config;
+  },
+};
+```
 
 ## Usage Guide
 
