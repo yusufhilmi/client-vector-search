@@ -184,6 +184,15 @@ export class EmbeddingIndex {
     return vector || null;
   }
 
+  size(): number {
+    // Returns the size of the index
+    return this.objects.length;
+  }
+
+  clear() {
+    this.objects = [];
+  }
+
   async search(
     queryEmbedding: number[],
     options: SearchOptions = {
