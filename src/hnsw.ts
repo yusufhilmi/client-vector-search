@@ -47,3 +47,47 @@ const EuclideanDistance = (a: Vector, b: Vector): Distance => {
 const getInsertLayer = (L: number, mL: number): number => {
   return Math.min(-Math.floor(Math.log(Math.random()) * mL), L - 1);
 };
+
+const _searchLayer = (
+  graph: Layer,
+  entry: NodeIndex,
+  query: Vector,
+  ef: number,
+): [Distance, NodeIndex][] => {
+  if (entry < 0 || entry >= graph.length) {
+    throw new Error(`Invalid entry index: ${entry}`);
+  }
+
+  const best: [Distance, NodeIndex] = [
+    EuclideanDistance(graph[entry].vector, query),
+    entry,
+  ];
+  const nns: [Distance, NodeIndex][] = [best];
+  const visited = new Set([best[1]]);
+  const candidates = new PriorityQueue<[Distance, NodeIndex]>(
+    [best],
+    (a, b) => a[0] - b[0],
+  );
+
+  while (!candidates.isEmpty()) {
+    const current = candidates.pop()!;
+    if (nns[nns.length - 1][0] < current[0]) break;
+
+    for (const e of graph[current[1]].connections) {
+      const dist = EuclideanDistance(graph[e].vector, query);
+      if (!visited.has(e)) {
+        visited.add(e);
+        if (dist < nns[nns.length - 1][0] || nns.length < ef) {
+          candidates.push([dist, e]);
+          nns.push([dist, e]);
+          nns.sort((a, b) => a[0] - b[0]);
+          if (nns.length > ef) {
+            nns.pop();
+          }
+        }
+      }
+    }
+  }
+
+  return nns;
+};
