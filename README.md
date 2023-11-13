@@ -20,18 +20,12 @@ Our goal is to build a super simple, fast vector search that works with couple h
 We'll initially keep things super simple and sub 100ms
 
 ### TODOs
-- [ ] localStorage
-- [ ] list out the models we recommend
-  - [ ] check their dimensions
+
 - [ ] test the performance of embedding times, indexing and search
-- [ ] use browser APIs such as localStorage for caching
-- [ ] generalize getEmbedding
-  - [ ] include embedding API provider options
 - [ ] simple tests
   - [ ] mock the @xenova/transformers for jest, it's not happy with it
 - [ ] automatically switch to a local vs API endpoint to get embeddings!
-- [ ] better index creation, search with k-d-tree, ball-tree etc. (wip)
-  - not a priority for now, 1k index takes sub 15ms to create, main problem is to get embeddings faster!
+
 
 ## Installation
 
