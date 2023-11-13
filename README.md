@@ -20,26 +20,6 @@ Our goal is to build a super simple, fast vector search that works with couple h
 We'll initially keep things super simple and sub 100ms
 
 ### TODOs
-- [x] embed with gte-small model
-- [x] cosine similarity
-- [x] create an index and implement search
-  - [x] brute force
-  - sub 10ms for to search 1k vectors
-  - sub 15ms for to create an index with 1k vectors
-  - takes around 20s to generate 100 embeddings with Xenova/gte-small
-  - creating 1k embeddings takes too much time and space tho!
-- [x] proper crud!
-  - [x] add
-  - [x] update
-  - [x] remove
-  - [x] get
-  - [x] batch remove
-- [x] reduce precision of embeddings, 7 decimal places is enough
-  - increased search speed by 3x
-  - reduced index size by 10x
-- [x] caching embeddings
-  - LRU cache embedding
-- [x] saving the index to [IndexedDB]([IndexedDB](https://developer.mozilla.org/en-US/docs/Web/API/IndexedDB_API))
 - [ ] localStorage
 - [ ] list out the models we recommend
   - [ ] check their dimensions
