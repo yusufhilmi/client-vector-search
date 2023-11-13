@@ -2,7 +2,7 @@
 
 A client side vector search library that can embed, search, and cache. Works on the browser and server side.
 
-It outperforms OpenAI's text-embedding-ada-002 and is way faster than Pinecone and other VectorDBs
+It outperforms OpenAI's text-embedding-ada-002 and is way faster than Pinecone and other VectorDBs.
 
 I'm the founder of [searchbase.app](https://searchbase.app) and we needed this for our product and customers. We'll be using this library in production. You can be sure it'll be maintained and improved.
 
@@ -15,16 +15,16 @@ Lots of improvements are coming!
 
 ## Roadmap
 
-Our goal is to build a super simple, fast vector search that works with couple hundred to thousands vectors. ~1k vectors covers 99% of the use cases.
+Our goal is to build a super simple, fast vector search that works with couple hundred to thousands vectors. ~1k vectors per user covers 99% of the use cases.
 
 We'll initially keep things super simple and sub 100ms
 
 ### TODOs
-
-- [ ] test the performance of embedding times, indexing and search
-- [ ] simple tests
-  - [ ] mock the @xenova/transformers for jest, it's not happy with it
-- [ ] automatically switch to a local vs API endpoint to get embeddings!
+- [ ] add HNSW index that works on node and browser env, don't rely on hnsw binder libs
+- [ ] add a proper testing suite and ci/cd for the lib
+  - [ ] simple health tests
+    - [ ] mock the @xenova/transformers for jest, it's not happy with it
+  - [ ] performance tests, recall, memory usage, cpu usage etc.
 
 
 ## Installation
