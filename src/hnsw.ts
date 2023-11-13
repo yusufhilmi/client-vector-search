@@ -140,4 +140,20 @@ class HNSW {
       }
     }
   }
+
+  search(query: Vector, ef = 1): [Distance, NodeIndex][] {
+    if (this.index[0].length === 0) {
+      return [];
+    }
+
+    let bestV = 0;
+    for (const graph of this.index) {
+      bestV = _searchLayer(graph, bestV, query, ef)[0][1];
+      if (graph[bestV].layerBelow === null) {
+        return _searchLayer(graph, bestV, query, ef);
+      }
+      bestV = graph[bestV].layerBelow!;
+    }
+    return [];
+  }
 }
