@@ -92,7 +92,7 @@ const _searchLayer = (
   return nns;
 };
 
-class HNSW {
+export class ExperimentalHNSWIndex {
   private L: number;
   private mL: number;
   private efc: number;
