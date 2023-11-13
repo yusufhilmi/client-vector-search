@@ -1,7 +1,3 @@
-/** Author: yusufhilmi, lurrobert
- * Let's keep everything here until it gets too big
- * My first npm package, can use help about design patterns, best practices!
- */
 const DEFAULT_TOP_K = 3;
 
 interface Filter {
@@ -11,7 +7,7 @@ interface Filter {
 import Cache from './cache';
 import { IndexedDbManager } from './indexedDB';
 
-// uncomment for testing only
+// uncomment if you want to test indexedDB implementation in node env for faster dev cycle
 // import { IDBFactory } from 'fake-indexeddb';
 // const indexedDB = new IDBFactory();
 
