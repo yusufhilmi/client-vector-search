@@ -7,9 +7,9 @@
 type Vector = number[];
 type Distance = number;
 type NodeIndex = number;
-type Layer = Node[];
+type Layer = LayerNode[];
 
-interface Node {
+interface LayerNode {
   vector: Vector;
   connections: NodeIndex[];
   layerBelow: NodeIndex | null;
@@ -91,3 +91,53 @@ const _searchLayer = (
 
   return nns;
 };
+
+class HNSW {
+  private L: number;
+  private mL: number;
+  private efc: number;
+  private index: Layer[];
+
+  constructor(L = 5, mL = 0.62, efc = 10) {
+    this.L = L;
+    this.mL = mL;
+    this.efc = efc;
+    this.index = Array.from({ length: L }, () => []);
+  }
+
+  insert(vec: Vector) {
+    const l = getInsertLayer(this.L, this.mL);
+    let startV = 0;
+
+    for (let n = 0; n < this.L; n++) {
+      const graph = this.index[n];
+
+      if (graph?.length === 0) {
+        // If the graph layer is empty, add a new node to it
+        graph.push({
+          vector: vec,
+          connections: [],
+          layerBelow: n < this.L - 1 ? this.index[n + 1].length : null,
+        });
+        continue;
+      }
+
+      if (n < l) {
+        startV = _searchLayer(graph, startV, vec, 1)[0][1];
+      } else {
+        const node: LayerNode = {
+          vector: vec,
+          connections: [],
+          layerBelow: n < this.L - 1 ? this.index[n + 1].length : null,
+        };
+        const nns = _searchLayer(graph, startV, vec, this.efc);
+        for (const nn of nns) {
+          node.connections.push(nn[1]);
+          graph[nn[1]].connections.push(graph.length);
+        }
+        graph.push(node);
+        startV = graph[startV].layerBelow!;
+      }
+    }
+  }
+}
