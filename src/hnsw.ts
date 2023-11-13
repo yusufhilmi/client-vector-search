@@ -39,3 +39,11 @@ class PriorityQueue<T> {
     return this.elements.length === 0;
   }
 }
+
+const EuclideanDistance = (a: Vector, b: Vector): Distance => {
+  return Math.sqrt(a.reduce((acc, val, i) => acc + Math.pow(val - b[i], 2), 0));
+};
+
+const getInsertLayer = (L: number, mL: number): number => {
+  return Math.min(-Math.floor(Math.log(Math.random()) * mL), L - 1);
+};
