@@ -7,6 +7,7 @@ interface Filter {
 import Cache from './cache';
 import { IndexedDbManager } from './indexedDB';
 import { cosineSimilarity } from './utils';
+export { ExperimentalHNSWIndex } from './hnsw';
 
 // uncomment if you want to test indexedDB implementation in node env for faster dev cycle
 // import { IDBFactory } from 'fake-indexeddb';
