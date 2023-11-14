@@ -35,6 +35,7 @@
     "typescript": "^4.9.5"
   },
   "dependencies": {
+    "@msgpack/msgpack": "^3.0.0-beta2",
     "@xenova/transformers": "^2.5.2",
     "lru-cache": "^10.0.1"
   }

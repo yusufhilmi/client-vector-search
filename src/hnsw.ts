@@ -3,6 +3,7 @@
 // - bare bones
 // - find # layers and optimal params
 // - test the speed, accuracy, and memory usage
+import { encode, decode } from '@msgpack/msgpack';
 
 type Vector = number[];
 type Distance = number;
@@ -13,6 +14,13 @@ interface LayerNode {
   vector: Vector;
   connections: NodeIndex[];
   layerBelow: NodeIndex | null;
+}
+
+interface HNSWData {
+  L: number;
+  mL: number;
+  efc: number;
+  index: Layer[];
 }
 
 // Simple Priority Queue Implementation
@@ -104,6 +112,9 @@ export class ExperimentalHNSWIndex {
     this.efc = efc;
     this.index = Array.from({ length: L }, () => []);
   }
+  setIndex(index: Layer[]): void {
+    this.index = index;
+  }
 
   insert(vec: Vector) {
     const l = getInsertLayer(this.L, this.mL);
@@ -166,9 +177,24 @@ export class ExperimentalHNSWIndex {
     };
   }
 
-  static fromJSON(json: any): HNSW {
-    const hnsw = new HNSW(json.L, json.mL, json.efc);
-    hnsw.index = json.index;
+  static fromJSON(json: any): ExperimentalHNSWIndex {
+    const hnsw = new ExperimentalHNSWIndex(json.L, json.mL, json.efc);
+    return hnsw;
+  }
+
+  toBinary() {
+    return encode({
+      L: this.L,
+      mL: this.mL,
+      efc: this.efc,
+      index: this.index,
+    });
+  }
+
+  static fromBinary(binary: Uint8Array): ExperimentalHNSWIndex {
+    const data = decode(binary) as HNSWData;
+    const hnsw = new ExperimentalHNSWIndex(data.L, data.mL, data.efc);
+    hnsw.setIndex(data.index);
     return hnsw;
   }
 }
