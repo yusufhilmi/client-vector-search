@@ -95,6 +95,22 @@ module.exports = {
 };
 ```
 
+#### Model load after page is loaded
+
+You can initialize the model before using it to generate embeddings. This will ensure that the model is loaded before you use it and provide a better UX.
+
+```js
+import { initializeModel } from "client-vector-search"
+...
+  useEffect(() => {
+    try {
+      initializeModel();
+    } catch (e) {
+      console.log(e);
+    }
+  }, []);
+```
+
 ## Usage Guide
 
 This guide provides a step-by-step walkthrough of the library's main features. It covers everything from generating embeddings for a string to performing operations on the index such as adding, updating, and removing objects. It also includes instructions on how to save the index to a database and perform search operations within it.
