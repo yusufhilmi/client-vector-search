@@ -156,4 +156,19 @@ export class ExperimentalHNSWIndex {
     }
     return [];
   }
+
+  toJSON() {
+    return {
+      L: this.L,
+      mL: this.mL,
+      efc: this.efc,
+      index: this.index,
+    };
+  }
+
+  static fromJSON(json: any): HNSW {
+    const hnsw = new HNSW(json.L, json.mL, json.efc);
+    hnsw.index = json.index;
+    return hnsw;
+  }
 }
