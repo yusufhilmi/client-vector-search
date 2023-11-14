@@ -49,13 +49,22 @@ class PriorityQueue<T> {
 }
 
 const EuclideanDistance = (a: Vector, b: Vector): Distance => {
-  return Math.sqrt(a.reduce((acc, val, i) => acc + Math.pow(val - b[i], 2), 0));
+  if (a.length !== b.length) {
+    throw new Error('Vectors must have the same length');
+  }
+
+  return Math.sqrt(
+    a.reduce((acc, val, i) => {
+      const bVal = b[i]; // Check b[i] in a variable
+      if (bVal === undefined) throw new Error('b[i] is undefined');
+      return acc + Math.pow(val - bVal, 2);
+    }, 0),
+  );
 };
 
 const getInsertLayer = (L: number, mL: number): number => {
   return Math.min(-Math.floor(Math.log(Math.random()) * mL), L - 1);
 };
-
 const _searchLayer = (
   graph: Layer,
   entry: NodeIndex,
@@ -66,8 +75,14 @@ const _searchLayer = (
     throw new Error(`Invalid entry index: ${entry}`);
   }
 
+  // Check if the graph at the entry index is defined
+  const graphEntry = graph[entry];
+  if (!graphEntry) {
+    throw new Error(`Graph entry at index ${entry} is undefined`);
+  }
+
   const best: [Distance, NodeIndex] = [
-    EuclideanDistance(graph[entry].vector, query),
+    EuclideanDistance(graphEntry.vector, query),
     entry,
   ];
   const nns: [Distance, NodeIndex][] = [best];
@@ -78,14 +93,24 @@ const _searchLayer = (
   );
 
   while (!candidates.isEmpty()) {
-    const current = candidates.pop()!;
-    if (nns[nns.length - 1][0] < current[0]) break;
+    const current = candidates.pop();
+    // Define a variable to hold the last element of nns array
+    const lastNnsElement = nns.length > 0 ? nns[nns.length - 1] : null;
+    // Check if current is not null and lastNnsElement is not undefined before comparing their values
+    if (!current || (lastNnsElement && lastNnsElement[0] < current[0])) break;
 
-    for (const e of graph[current[1]].connections) {
-      const dist = EuclideanDistance(graph[e].vector, query);
+    const graphCurrent = graph[current[1]];
+    if (!graphCurrent) continue;
+
+    for (const e of graphCurrent.connections) {
+      const graphE = graph[e];
+      if (!graphE) continue;
+
+      const dist = EuclideanDistance(graphE.vector, query);
       if (!visited.has(e)) {
         visited.add(e);
-        if (dist < nns[nns.length - 1][0] || nns.length < ef) {
+        const lastNn = nns[nns.length - 1];
+        if (!lastNn || dist < lastNn[0] || nns.length < ef) {
           candidates.push([dist, e]);
           nns.push([dist, e]);
           nns.sort((a, b) => a[0] - b[0]);
@@ -99,7 +124,6 @@ const _searchLayer = (
 
   return nns;
 };
-
 export class ExperimentalHNSWIndex {
   private L: number;
   private mL: number;
@@ -125,29 +149,42 @@ export class ExperimentalHNSWIndex {
 
       if (graph?.length === 0) {
         // If the graph layer is empty, add a new node to it
-        graph.push({
+        // Assign next layer to a variable and check if it's undefined
+        const nextLayer = this.index[n + 1];
+        const nextLayerLength = nextLayer ? nextLayer.length : null;
+        graph?.push({
           vector: vec,
           connections: [],
-          layerBelow: n < this.L - 1 ? this.index[n + 1].length : null,
+          layerBelow: n < this.L - 1 ? nextLayerLength : null,
         });
         continue;
       }
 
-      if (n < l) {
-        startV = _searchLayer(graph, startV, vec, 1)[0][1];
-      } else {
+      if (n < l && graph) {
+        // Check if the search layer result is not undefined before accessing its properties
+        const searchLayerResult = _searchLayer(graph, startV, vec, 1);
+        startV =
+          searchLayerResult && searchLayerResult[0]
+            ? searchLayerResult[0][1]
+            : startV;
+      } else if (graph) {
+        // Assign next layer to a variable and check if it's undefined
+        const nextLayer = this.index[n + 1];
+        const nextLayerLength = nextLayer ? nextLayer.length : null;
         const node: LayerNode = {
           vector: vec,
           connections: [],
-          layerBelow: n < this.L - 1 ? this.index[n + 1].length : null,
+          layerBelow: n < this.L - 1 ? nextLayerLength : null,
         };
         const nns = _searchLayer(graph, startV, vec, this.efc);
         for (const nn of nns) {
           node.connections.push(nn[1]);
-          graph[nn[1]].connections.push(graph.length);
+          graph[nn[1]]?.connections.push(graph.length);
         }
-        graph.push(node);
-        startV = graph[startV].layerBelow!;
+        graph?.push(node);
+        // Assign graph[startV] to a variable and check if it's undefined before accessing its properties
+        const graphStartV = graph[startV];
+        if (graphStartV) startV = graphStartV.layerBelow!;
       }
     }
   }
