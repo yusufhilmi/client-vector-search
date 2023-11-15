@@ -5,10 +5,21 @@
 export class IndexedDbManager {
   private DBname!: string;
   private objectStoreName!: string;
+  private db: IDBDatabase | null = null;
 
   constructor(DBname: string, objectStoreName: string) {
     this.DBname = DBname;
     this.objectStoreName = objectStoreName;
+  }
+
+  startTransaction(
+    storeNames: string | string[],
+    mode: IDBTransactionMode = 'readonly',
+  ): IDBTransaction {
+    if (!this.db) {
+      throw new Error('Database has not been initialized.');
+    }
+    return this.db.transaction(storeNames, mode);
   }
 
   static async create(
@@ -156,6 +167,7 @@ export class IndexedDbManager {
       console.error('An error occurred:', error);
     }
   }
+
   async deleteIndexedDBObjectStoreFromDB(
     DBname: string,
     objectStoreName: string,

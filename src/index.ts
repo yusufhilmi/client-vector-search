@@ -28,6 +28,7 @@ type StorageOptions = 'indexedDB' | 'localStorage' | 'none';
  */
 interface SearchOptions {
   topK?: number;
+  batchSize?: number;
   filter?: Filter;
   useStorage?: StorageOptions;
   storageOptions?: { indexedDBName: string; indexedDBObjectStoreName: string }; // TODO: generalize it to localStorage as well
@@ -164,18 +165,12 @@ export class EmbeddingIndex {
 
   async search(
     queryEmbedding: number[],
-    options: SearchOptions = {
-      topK: 3,
-      useStorage: 'none',
-      storageOptions: {
-        indexedDBName: 'clientVectorDB',
-        indexedDBObjectStoreName: 'ClientEmbeddingStore',
-      },
-    },
+    options: SearchOptions,
   ): Promise<SearchResult[]> {
     const topK = options.topK || DEFAULT_TOP_K;
     const filter = options.filter || {};
     const useStorage = options.useStorage || 'none';
+    const batchSize = options.batchSize || 2000;
 
     if (useStorage === 'indexedDB') {
       const DBname = options.storageOptions?.indexedDBName || 'clientVectorDB';
@@ -187,14 +182,15 @@ export class EmbeddingIndex {
         console.error('IndexedDB is not supported');
         throw new Error('IndexedDB is not supported');
       }
-      const results = await this.loadAndSearchFromIndexedDB(
+
+      return await this.loadAndSearchFromIndexedDB(
         DBname,
         objectStoreName,
         queryEmbedding,
         topK,
         filter,
+        batchSize,
       );
-      return results;
     } else {
       // Compute similarities
       const similarities = this.objects
@@ -262,24 +258,57 @@ export class EmbeddingIndex {
   }
 
   async loadAndSearchFromIndexedDB(
-    DBname: string = 'clientVectorDB',
-    objectStoreName: string = 'ClientEmbeddingStore',
+    DBname: string,
+    objectStoreName: string,
     queryEmbedding: number[],
     topK: number,
     filter: { [key: string]: any },
+    batchSize: number = 2000,
   ): Promise<SearchResult[]> {
-    const db = await IndexedDbManager.create(DBname, objectStoreName);
-    const generator = db.dbGenerator();
-    const results: { similarity: number; object: any }[] = [];
+    const manager = await IndexedDbManager.create(DBname, objectStoreName);
 
-    for await (const record of generator) {
-      if (Object.keys(filter).every((key) => record[key] === filter[key])) {
-        const similarity = cosineSimilarity(queryEmbedding, record.embedding);
-        results.push({ similarity, object: record });
+    const transaction = manager.startTransaction(objectStoreName, 'readonly');
+    const store = transaction.objectStore(objectStoreName);
+
+    let request = store.openCursor();
+    let results: { similarity: number; object: any }[] = [];
+    let batch: any[] = [];
+
+    const processBatch = (batch: any[]) => {
+      batch.forEach((item: any) => {
+        const similarity = cosineSimilarity(queryEmbedding, item.embedding);
+        results.push({ similarity, object: item });
+      });
+    };
+
+    request.onsuccess = () => {
+      const cursor = request.result;
+      if (cursor) {
+        if (
+          Object.keys(filter).every((key) => cursor.value[key] === filter[key])
+        ) {
+          batch.push(cursor.value);
+          
+          if (batch.length === batchSize) {
+            processBatch(batch);
+            batch = [];
+          }
+        }
+        cursor.continue();
+      } else {
+        if (batch.length > 0) {
+          processBatch(batch);
+        }
+        return results
+          .sort((a, b) => b.similarity - a.similarity)
+          .slice(0, topK);
       }
-    }
-    results.sort((a, b) => b.similarity - a.similarity);
-    return results.slice(0, topK);
+    };
+
+    return new Promise((resolve, reject) => {
+      transaction.oncomplete = () => resolve(results);
+      transaction.onerror = () => reject(new Error('Transaction failed'));
+    });
   }
 
   async deleteIndexedDB(DBname: string = 'clientVectorDB'): Promise<void> {
