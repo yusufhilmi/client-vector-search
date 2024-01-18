@@ -120,10 +120,12 @@ export class EmbeddingIndex {
     if (index === -1) {
       throw new Error('Vector not found');
     }
-    // Validate and add the new vector
-    this.validateAndAdd(vector);
+    if (vector.hasOwnProperty('embedding')) {
+      // Validate and add the new vector
+      this.validateAndAdd(vector);
+    }
     // Replace the old vector with the new one
-    this.objects[index] = vector;
+    this.objects[index] = Object.assign(this.objects[index] as Filter, vector);
   }
 
   // Method to remove a vector from the index
